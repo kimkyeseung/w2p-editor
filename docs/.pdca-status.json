@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-08-23T18:43:49.897Z",
+  "lastUpdated": "2026-08-23T19:06:34.043Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -59,7 +59,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:45:57.583Z",
-        "lastUpdated": "2026-08-23T18:42:14.229Z"
+        "lastUpdated": "2026-08-23T19:06:34.043Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Canvas/Canvas.tsx"
     },
@@ -124,7 +124,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-08-23T18:43:49.897Z"
+    "lastActivity": "2026-08-23T19:06:34.043Z"
   },
   "history": [
     {
@@ -322,6 +322,24 @@
     {
       "timestamp": "2026-08-23T18:43:49.897Z",
       "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-23T19:03:40.977Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-23T19:06:23.560Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-23T19:06:34.043Z",
+      "feature": "Canvas",
       "phase": "do",
       "action": "updated"
     }

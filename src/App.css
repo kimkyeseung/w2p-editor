@@ -26,11 +26,9 @@
 }
 
 .canvas-wrap {
-  overflow: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
 }
 
 .mobile-tabs {
@@ -44,7 +42,6 @@
   }
 
   .canvas-wrap {
-    padding: 1rem;
     grid-row: 1;
   }
 

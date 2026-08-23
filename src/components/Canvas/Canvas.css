@@ -1,8 +1,33 @@
+.canvas-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  display: flex;
+  /* "safe" keeps the start edge (e.g. the top of a tall poster) reachable by
+     scrolling instead of being permanently clipped once content overflows a
+     centered flex container — the classic flexbox centering + overflow trap. */
+  align-items: safe center;
+  justify-content: safe center;
+  padding: 2rem;
+}
+
+.canvas-zoom-frame {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .canvas-stage {
   position: relative;
   background: #ffffff;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12);
   touch-action: none;
+  transform-origin: 0 0;
 }
 
 .canvas-stage canvas {
@@ -33,4 +58,65 @@
   stroke: #3b82f6;
   stroke-width: 1;
   stroke-dasharray: 3 4;
+}
+
+.pan-overlay {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+  z-index: 5;
+}
+
+.pan-overlay:active {
+  cursor: grabbing;
+}
+
+.canvas-view-controls {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  background: rgba(31, 41, 55, 0.92);
+  border-radius: 10px;
+  padding: 0.3rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 10;
+}
+
+.canvas-view-controls button {
+  border: none;
+  background: transparent;
+  color: #f9fafb;
+  font-size: 0.95rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-view-controls button:hover {
+  background: #374151;
+}
+
+.canvas-view-controls button.is-active {
+  background: #2563eb;
+}
+
+.canvas-view-controls .zoom-readout {
+  width: auto;
+  min-width: 3.4rem;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 860px) {
+  .canvas-scroll {
+    padding: 1rem;
+  }
 }
