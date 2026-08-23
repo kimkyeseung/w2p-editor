@@ -1,0 +1,143 @@
+import { useRef, type RefObject } from 'react'
+import { useEditorStore } from '../../store/editorStore'
+import { CANVAS_PRESETS } from '../../utils/presets'
+import { readImageFile } from '../../utils/canvasSerialization'
+import type { CanvasHandle } from '../Canvas/Canvas'
+import './Toolbar.css'
+
+const MAX_INITIAL_IMAGE_WIDTH = 320
+
+interface ToolbarProps {
+  canvasHandleRef: RefObject<CanvasHandle | null>
+  onOpenMockup: () => void
+}
+
+export function Toolbar({ canvasHandleRef, onOpenMockup }: ToolbarProps) {
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const projectInputRef = useRef<HTMLInputElement>(null)
+
+  const presetId = useEditorStore((s) => s.presetId)
+  const setPreset = useEditorStore((s) => s.setPreset)
+  const addTextLayer = useEditorStore((s) => s.addTextLayer)
+  const addImageLayer = useEditorStore((s) => s.addImageLayer)
+  const undo = useEditorStore((s) => s.undo)
+  const redo = useEditorStore((s) => s.redo)
+  const canUndo = useEditorStore((s) => s.past.length > 0)
+  const canRedo = useEditorStore((s) => s.future.length > 0)
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      window.alert('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+    try {
+      const { src, width, height } = await readImageFile(file)
+      const scale = Math.min(1, MAX_INITIAL_IMAGE_WIDTH / width)
+      addImageLayer(src, Math.round(width * scale), Math.round(height * scale))
+    } catch {
+      window.alert('이미지를 불러오지 못했습니다.')
+    }
+  }
+
+  const handleProjectFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      await canvasHandleRef.current?.importProjectFile(file)
+    } catch {
+      window.alert('프로젝트 파일을 불러오지 못했습니다.')
+    }
+  }
+
+  return (
+    <header className="toolbar">
+      <div className="toolbar-brand">
+        <img src="/favicon.svg" alt="" width={22} height={22} />
+        <span>W2P Editor</span>
+      </div>
+
+      <div className="toolbar-group">
+        <label className="toolbar-label" htmlFor="preset-select">
+          템플릿
+        </label>
+        <select
+          id="preset-select"
+          value={presetId}
+          onChange={(e) => setPreset(e.target.value)}
+        >
+          {CANVAS_PRESETS.map((preset) => (
+            <option key={preset.id} value={preset.id}>
+              {preset.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="toolbar-group">
+        <button type="button" onClick={addTextLayer}>
+          + 텍스트
+        </button>
+        <button type="button" onClick={() => imageInputRef.current?.click()}>
+          + 이미지
+        </button>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={handleImageChange}
+        />
+      </div>
+
+      <div className="toolbar-group">
+        <button type="button" onClick={undo} disabled={!canUndo} title="실행 취소 (Ctrl/Cmd+Z)">
+          ↶ 실행 취소
+        </button>
+        <button
+          type="button"
+          onClick={redo}
+          disabled={!canRedo}
+          title="다시 실행 (Shift+Ctrl/Cmd+Z)"
+        >
+          ↷ 다시 실행
+        </button>
+      </div>
+
+      <div className="toolbar-group">
+        <button type="button" onClick={() => canvasHandleRef.current?.saveToLocalStorage()}>
+          저장
+        </button>
+        <button type="button" onClick={() => canvasHandleRef.current?.loadFromLocalStorage()}>
+          불러오기
+        </button>
+        <button type="button" onClick={() => canvasHandleRef.current?.exportProjectFile()}>
+          파일로 내보내기
+        </button>
+        <button type="button" onClick={() => projectInputRef.current?.click()}>
+          파일 불러오기
+        </button>
+        <input
+          ref={projectInputRef}
+          type="file"
+          accept="application/json"
+          hidden
+          onChange={handleProjectFileChange}
+        />
+        <button
+          type="button"
+          className="toolbar-primary"
+          onClick={() => canvasHandleRef.current?.exportPng()}
+        >
+          PNG 내보내기
+        </button>
+        <button type="button" onClick={onOpenMockup}>
+          🖼 목업 미리보기
+        </button>
+      </div>
+    </header>
+  )
+}

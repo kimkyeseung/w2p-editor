@@ -1,0 +1,36 @@
+.canvas-stage {
+  position: relative;
+  background: #ffffff;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12);
+  touch-action: none;
+}
+
+.canvas-stage canvas {
+  display: block;
+}
+
+.canvas-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.guide-bleed {
+  fill: none;
+  stroke: #f97316;
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+}
+
+.guide-trim {
+  fill: none;
+  stroke: #ef4444;
+  stroke-width: 1;
+}
+
+.guide-safe {
+  fill: none;
+  stroke: #3b82f6;
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
