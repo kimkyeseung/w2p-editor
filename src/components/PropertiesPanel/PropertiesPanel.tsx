@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { useEditorStore } from '../../store/editorStore'
+import { NumberField } from '../common/NumberField'
 import type { TextLayer } from '../../types/editor'
 import './PropertiesPanel.css'
 
@@ -13,53 +13,6 @@ const FONT_OPTIONS = [
   'Verdana',
   'Courier New',
 ]
-
-interface NumberFieldProps {
-  label: string
-  value: number
-  suffix?: string
-  onCommit: (value: number) => void
-}
-
-function NumberField({ label, value, suffix, onCommit }: NumberFieldProps) {
-  const [draft, setDraft] = useState(String(Math.round(value)))
-  const [focused, setFocused] = useState(false)
-
-  useEffect(() => {
-    if (!focused) setDraft(String(Math.round(value)))
-  }, [value, focused])
-
-  const commit = () => {
-    const parsed = Number(draft)
-    if (Number.isFinite(parsed)) {
-      onCommit(parsed)
-    } else {
-      setDraft(String(Math.round(value)))
-    }
-  }
-
-  return (
-    <label className="prop-field prop-field-number">
-      <span>{label}</span>
-      <div className="prop-input-wrap">
-        <input
-          type="number"
-          value={draft}
-          onFocus={() => setFocused(true)}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => {
-            setFocused(false)
-            commit()
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-          }}
-        />
-        {suffix && <span className="prop-suffix">{suffix}</span>}
-      </div>
-    </label>
-  )
-}
 
 export function PropertiesPanel() {
   const layers = useEditorStore((s) => s.layers)

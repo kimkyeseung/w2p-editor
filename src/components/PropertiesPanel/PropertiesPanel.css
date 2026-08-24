@@ -39,25 +39,6 @@
   border-radius: 6px;
 }
 
-.prop-input-wrap {
-  position: relative;
-}
-
-.prop-input-wrap input {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.prop-suffix {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.75rem;
-  color: #9ca3af;
-  pointer-events: none;
-}
-
 .prop-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

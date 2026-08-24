@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createProject, deleteProject, fetchProjects } from '../../utils/api'
+import { Modal } from '../common/Modal'
 import type { ApiProject, EditorLayer } from '../../types/editor'
 import './ProjectList.css'
 
@@ -57,15 +58,7 @@ export function ProjectList({ currentPresetId, currentLayers, onLoad, onClose }:
   }
 
   return (
-    <div className="mockup-overlay" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="project-list-dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="mockup-header">
-          <h2>프로젝트 목록 (REST API 데모)</h2>
-          <button type="button" className="mockup-close" onClick={onClose} aria-label="닫기">
-            ✕
-          </button>
-        </div>
-
+    <Modal title="프로젝트 목록 (REST API 데모)" onClose={onClose} dialogClassName="project-list-dialog">
         <div className="project-save-row">
           <input
             type="text"
@@ -119,7 +112,6 @@ export function ProjectList({ currentPresetId, currentLayers, onLoad, onClose }:
           GET/POST/DELETE로 json-server와 통신하는 REST API 연동 데모입니다 (저장소: <code>db.json</code>
           ).
         </p>
-      </div>
-    </div>
+    </Modal>
   )
 }

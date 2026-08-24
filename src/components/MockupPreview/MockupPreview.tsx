@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Modal } from '../common/Modal'
 import './MockupPreview.css'
 
 export type MockupType = 'card' | 'poster' | 'square'
@@ -35,15 +36,7 @@ export function MockupPreview({ designDataUrl, presetId, onClose }: MockupPrevie
   const matchesCurrentPreset = mockupType === PRESET_TO_MOCKUP[presetId]
 
   return (
-    <div className="mockup-overlay" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="mockup-dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="mockup-header">
-          <h2>상품 목업 미리보기</h2>
-          <button type="button" className="mockup-close" onClick={onClose} aria-label="닫기">
-            ✕
-          </button>
-        </div>
-
+    <Modal title="상품 목업 미리보기" onClose={onClose} dialogClassName="mockup-dialog">
         <div className="mockup-tabs">
           {(Object.keys(MOCKUP_LABELS) as MockupType[]).map((type) => (
             <button
@@ -127,7 +120,6 @@ export function MockupPreview({ designDataUrl, presetId, onClose }: MockupPrevie
             : '현재 캔버스 규격과 다른 목업입니다. 비율이 다르게 표시될 수 있어요.'}
           {' '}실제 인쇄 결과물이 아닌 배치 확인용 이미지입니다.
         </p>
-      </div>
-    </div>
+    </Modal>
   )
 }
