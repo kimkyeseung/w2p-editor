@@ -110,7 +110,11 @@ function App() {
       </nav>
 
       {mockupDataUrl && (
-        <MockupPreview designDataUrl={mockupDataUrl} onClose={() => setMockupDataUrl(null)} />
+        <MockupPreview
+          designDataUrl={mockupDataUrl}
+          presetId={presetId}
+          onClose={() => setMockupDataUrl(null)}
+        />
       )}
       {projectListOpen && (
         <ProjectList
