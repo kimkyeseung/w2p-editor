@@ -60,6 +60,17 @@
   stroke-dasharray: 3 4;
 }
 
+.canvas-align-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.canvas-align-guides line {
+  stroke: #ec4899;
+  stroke-width: 1;
+}
+
 .pan-overlay {
   position: absolute;
   inset: 0;

@@ -143,13 +143,22 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const pendingImageIds = useRef(new Set<string>())
   const pinchStateRef = useRef<{ distance: number; zoom: number } | null>(null)
   const panDragRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number } | null>(null)
+  const zoomRef = useRef(1)
 
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [panMode, setPanMode] = useState(false)
   const [spaceHeld, setSpaceHeld] = useState(false)
   const [showGuides, setShowGuides] = useState(true)
+  const [alignGuides, setAlignGuides] = useState<{ vertical: number[]; horizontal: number[] }>({
+    vertical: [],
+    horizontal: [],
+  })
   const isPanning = panMode || spaceHeld
+
+  useEffect(() => {
+    zoomRef.current = zoom
+  }, [zoom])
 
   const layers = useEditorStore((s) => s.layers)
   const selectedId = useEditorStore((s) => s.selectedId)
@@ -311,7 +320,80 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
         rotation: Math.round(target.angle ?? 0),
         ...(target instanceof fabric.Textbox ? { text: target.text ?? '' } : {}),
       })
+      setAlignGuides({ vertical: [], horizontal: [] })
     }
+
+    // Figma/Illustrator-style smart guides: snap the dragged object's edges
+    // and center to the canvas center/edges and to other objects' edges and
+    // center, within a screen-space threshold (scaled by zoom so it feels
+    // consistent at any zoom level), and surface the matched lines for the
+    // SVG overlay to draw. Reads canvas.width/height (Fabric's own tracked
+    // dimensions, always current) rather than the totalWidth/totalHeight
+    // closure variables, since this effect only runs once on mount.
+    const handleObjectMoving = (e: { target?: fabric.FabricObject }) => {
+      const target = e.target
+      if (!target) return
+      const threshold = 8 / zoomRef.current
+      const canvasWidth = canvas.width ?? 0
+      const canvasHeight = canvas.height ?? 0
+
+      const width = target.getScaledWidth()
+      const height = target.getScaledHeight()
+      const centerX = target.left ?? 0
+      const centerY = target.top ?? 0
+      const left = centerX - width / 2
+      const right = centerX + width / 2
+      const top = centerY - height / 2
+      const bottom = centerY + height / 2
+
+      const candidatesX = [0, canvasWidth / 2, canvasWidth]
+      const candidatesY = [0, canvasHeight / 2, canvasHeight]
+      canvas.getObjects().forEach((obj) => {
+        if (obj === target || obj.visible === false) return
+        const c = obj.getCenterPoint()
+        const w = obj.getScaledWidth()
+        const h = obj.getScaledHeight()
+        candidatesX.push(c.x - w / 2, c.x, c.x + w / 2)
+        candidatesY.push(c.y - h / 2, c.y, c.y + h / 2)
+      })
+
+      let bestDx: number | null = null
+      for (const edge of [left, centerX, right]) {
+        for (const candidate of candidatesX) {
+          const dx = candidate - edge
+          if (Math.abs(dx) <= threshold && (bestDx === null || Math.abs(dx) < Math.abs(bestDx))) {
+            bestDx = dx
+          }
+        }
+      }
+      let matchedX: number[] = []
+      if (bestDx !== null) {
+        const snapped = [left + bestDx, centerX + bestDx, right + bestDx]
+        matchedX = [...new Set(candidatesX.filter((c) => snapped.some((s) => Math.abs(c - s) < 0.5)))]
+        target.set('left', centerX + bestDx)
+      }
+
+      let bestDy: number | null = null
+      for (const edge of [top, centerY, bottom]) {
+        for (const candidate of candidatesY) {
+          const dy = candidate - edge
+          if (Math.abs(dy) <= threshold && (bestDy === null || Math.abs(dy) < Math.abs(bestDy))) {
+            bestDy = dy
+          }
+        }
+      }
+      let matchedY: number[] = []
+      if (bestDy !== null) {
+        const snapped = [top + bestDy, centerY + bestDy, bottom + bestDy]
+        matchedY = [...new Set(candidatesY.filter((c) => snapped.some((s) => Math.abs(c - s) < 0.5)))]
+        target.set('top', centerY + bestDy)
+      }
+
+      target.setCoords()
+      setAlignGuides({ vertical: matchedX, horizontal: matchedY })
+    }
+    const clearAlignGuides = () => setAlignGuides({ vertical: [], horizontal: [] })
+
     const handleSelectionChange = (e: { selected?: fabric.FabricObject[] }) => {
       const first = e.selected?.[0]
       const id = first ? objectToId.current.get(first) ?? null : null
@@ -320,6 +402,8 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     const handleSelectionCleared = () => selectLayer(null)
 
     canvas.on('object:modified', handleModified)
+    canvas.on('object:moving', handleObjectMoving)
+    canvas.on('mouse:up', clearAlignGuides)
     canvas.on('selection:created', handleSelectionChange)
     canvas.on('selection:updated', handleSelectionChange)
     canvas.on('selection:cleared', handleSelectionCleared)
@@ -553,6 +637,18 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
                     width={Math.max(trimWidthPx - safePx * 2, 0)}
                     height={Math.max(trimHeightPx - safePx * 2, 0)}
                   />
+                </svg>
+              </div>
+            )}
+            {(alignGuides.vertical.length > 0 || alignGuides.horizontal.length > 0) && (
+              <div className="canvas-align-guides" aria-hidden="true">
+                <svg width={totalWidth} height={totalHeight}>
+                  {alignGuides.vertical.map((x) => (
+                    <line key={`v-${x}`} x1={x} y1={0} x2={x} y2={totalHeight} />
+                  ))}
+                  {alignGuides.horizontal.map((y) => (
+                    <line key={`h-${y}`} x1={0} y1={y} x2={totalWidth} y2={y} />
+                  ))}
                 </svg>
               </div>
             )}
