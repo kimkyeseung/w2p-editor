@@ -225,7 +225,11 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   // Hold Space for a temporary hand tool, Photoshop/Figma-style.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== 'Space' || isTypingTarget(e.target) || e.repeat) return
+      if (e.code !== 'Space' || isTypingTarget(e.target)) return
+      // Browsers auto-repeat keydown while a key is held, and Space's
+      // default action is "scroll the page down" — without preventDefault
+      // on every repeat (not just the first press), holding Space scrolls
+      // the canvas to the bottom instead of just toggling the hand tool.
       e.preventDefault()
       setSpaceHeld(true)
     }
@@ -505,18 +509,22 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
               </svg>
             </div>
           </div>
-
-          {isPanning && (
-            <div
-              className="pan-overlay"
-              onPointerDown={handlePanPointerDown}
-              onPointerMove={handlePanPointerMove}
-              onPointerUp={handlePanPointerUp}
-              onPointerCancel={handlePanPointerUp}
-            />
-          )}
         </div>
       </div>
+
+      {/* Sized to the whole viewport (not just the paper) so the hand
+          cursor and drag capture keep working over the gray margin too —
+          it sits above canvas-scroll but below canvas-view-controls (see
+          z-index) so the toolbar buttons stay clickable while panning. */}
+      {isPanning && (
+        <div
+          className="pan-overlay"
+          onPointerDown={handlePanPointerDown}
+          onPointerMove={handlePanPointerMove}
+          onPointerUp={handlePanPointerUp}
+          onPointerCancel={handlePanPointerUp}
+        />
+      )}
 
       <div className="canvas-view-controls">
         <button
