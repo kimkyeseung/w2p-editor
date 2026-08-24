@@ -4,6 +4,7 @@ import { Canvas, type CanvasHandle } from './components/Canvas/Canvas'
 import { LayerPanel } from './components/LayerPanel/LayerPanel'
 import { PropertiesPanel } from './components/PropertiesPanel/PropertiesPanel'
 import { MockupPreview } from './components/MockupPreview/MockupPreview'
+import { Toast } from './components/Toast/Toast'
 import { useEditorStore } from './store/editorStore'
 import './App.css'
 
@@ -21,8 +22,16 @@ const isEditableTarget = (target: EventTarget | null): boolean => {
 
 function App() {
   const canvasHandleRef = useRef<CanvasHandle>(null)
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [mobileTab, setMobileTab] = useState<MobileTab>('layers')
   const [mockupDataUrl, setMockupDataUrl] = useState<string | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const showToast = (message: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    setToastMessage(message)
+    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 2000)
+  }
 
   const undo = useEditorStore((s) => s.undo)
   const redo = useEditorStore((s) => s.redo)
@@ -59,7 +68,7 @@ function App() {
 
   return (
     <div className="app">
-      <Toolbar canvasHandleRef={canvasHandleRef} onOpenMockup={handleOpenMockup} />
+      <Toolbar canvasHandleRef={canvasHandleRef} onOpenMockup={handleOpenMockup} onToast={showToast} />
       <div className="workspace">
         <aside className={`side-panel layer-panel-wrap ${mobileTab === 'layers' ? 'is-active' : ''}`}>
           <LayerPanel />
@@ -93,6 +102,7 @@ function App() {
       {mockupDataUrl && (
         <MockupPreview designDataUrl={mockupDataUrl} onClose={() => setMockupDataUrl(null)} />
       )}
+      <Toast message={toastMessage} />
     </div>
   )
 }

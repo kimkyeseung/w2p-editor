@@ -15,7 +15,7 @@ import './Canvas.css'
 export interface CanvasHandle {
   exportPng: () => void
   saveToLocalStorage: () => void
-  loadFromLocalStorage: () => void
+  loadFromLocalStorage: () => boolean
   exportProjectFile: () => void
   importProjectFile: (file: File) => Promise<void>
   getDesignDataUrl: () => string | null
@@ -115,6 +115,14 @@ const MAX_ZOOM = 4
 const clampZoom = (value: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value))
 const VIEWPORT_PADDING = 64 // matches .canvas-wrap's CSS padding (2rem each side)
 
+// Web fonts loaded via <link> in index.html aren't fetched until something
+// actually renders text with them — and unlike DOM text, Fabric's canvas
+// text draws once with whatever's available *right now* and never repaints
+// itself when the real font finishes loading. We kick the download off
+// explicitly and force one re-render once it's ready, so Korean text isn't
+// stuck on the system fallback font.
+const WEB_FONT_FAMILIES = ['Noto Sans KR', 'Nanum Gothic', 'Nanum Myeongjo']
+
 const isTypingTarget = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) return false
   return (
@@ -147,7 +155,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const selectedId = useEditorStore((s) => s.selectedId)
   const presetId = useEditorStore((s) => s.presetId)
   const selectLayer = useEditorStore((s) => s.selectLayer)
-  const updateLayerTransform = useEditorStore((s) => s.updateLayerTransform)
+  const applyCanvasModification = useEditorStore((s) => s.applyCanvasModification)
   const replaceAll = useEditorStore((s) => s.replaceAll)
 
   const preset = useMemo(() => getPresetById(presetId), [presetId])
@@ -290,12 +298,18 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       const id = objectToId.current.get(target)
       if (!id) return
       const topLeft = topLeftFromObject(target)
-      updateLayerTransform(id, {
+      // Fabric also fires `object:modified` when the user finishes editing
+      // text inline on the canvas (double-click). If we only write the
+      // transform back here, the next store->canvas sync re-applies the
+      // *old* text from the (now stale) layer and silently reverts the
+      // edit — so text content rides along in the same update.
+      applyCanvasModification(id, {
         x: Math.round(topLeft.x),
         y: Math.round(topLeft.y),
         width: Math.round(topLeft.width),
         height: Math.round(topLeft.height),
         rotation: Math.round(target.angle ?? 0),
+        ...(target instanceof fabric.Textbox ? { text: target.text ?? '' } : {}),
       })
     }
     const handleSelectionChange = (e: { selected?: fabric.FabricObject[] }) => {
@@ -318,6 +332,19 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       pendingImageIds.current.clear()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Explicitly trigger the Korean web fonts to download, then force one
+  // re-render once they land (see WEB_FONT_FAMILIES comment above).
+  useEffect(() => {
+    if (typeof document === 'undefined' || !('fonts' in document)) return
+    const loads = WEB_FONT_FAMILIES.flatMap((family) => [
+      document.fonts.load(`16px "${family}"`).catch(() => {}),
+      document.fonts.load(`700 16px "${family}"`).catch(() => {}),
+    ])
+    Promise.all(loads).finally(() => {
+      fabricRef.current?.requestRenderAll()
+    })
   }, [])
 
   // Resize the canvas when the print preset changes, and auto-fit the view
@@ -459,7 +486,9 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     },
     loadFromLocalStorage: () => {
       const project = loadFromLocalStorage()
-      if (project) replaceAll(project.layers, project.presetId)
+      if (!project) return false
+      replaceAll(project.layers, project.presetId)
+      return true
     },
     exportProjectFile: () => {
       const canvas = fabricRef.current

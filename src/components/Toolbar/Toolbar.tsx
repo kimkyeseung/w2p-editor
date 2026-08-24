@@ -10,9 +10,10 @@ const MAX_INITIAL_IMAGE_WIDTH = 320
 interface ToolbarProps {
   canvasHandleRef: RefObject<CanvasHandle | null>
   onOpenMockup: () => void
+  onToast: (message: string) => void
 }
 
-export function Toolbar({ canvasHandleRef, onOpenMockup }: ToolbarProps) {
+export function Toolbar({ canvasHandleRef, onOpenMockup, onToast }: ToolbarProps) {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const projectInputRef = useRef<HTMLInputElement>(null)
 
@@ -48,6 +49,7 @@ export function Toolbar({ canvasHandleRef, onOpenMockup }: ToolbarProps) {
     if (!file) return
     try {
       await canvasHandleRef.current?.importProjectFile(file)
+      onToast('파일을 불러왔습니다.')
     } catch {
       window.alert('프로젝트 파일을 불러오지 못했습니다.')
     }
@@ -108,13 +110,31 @@ export function Toolbar({ canvasHandleRef, onOpenMockup }: ToolbarProps) {
       </div>
 
       <div className="toolbar-group">
-        <button type="button" onClick={() => canvasHandleRef.current?.saveToLocalStorage()}>
+        <button
+          type="button"
+          onClick={() => {
+            canvasHandleRef.current?.saveToLocalStorage()
+            onToast('저장되었습니다.')
+          }}
+        >
           저장
         </button>
-        <button type="button" onClick={() => canvasHandleRef.current?.loadFromLocalStorage()}>
+        <button
+          type="button"
+          onClick={() => {
+            const loaded = canvasHandleRef.current?.loadFromLocalStorage()
+            onToast(loaded ? '불러왔습니다.' : '저장된 프로젝트가 없습니다.')
+          }}
+        >
           불러오기
         </button>
-        <button type="button" onClick={() => canvasHandleRef.current?.exportProjectFile()}>
+        <button
+          type="button"
+          onClick={() => {
+            canvasHandleRef.current?.exportProjectFile()
+            onToast('파일로 내보냈습니다.')
+          }}
+        >
           파일로 내보내기
         </button>
         <button type="button" onClick={() => projectInputRef.current?.click()}>
@@ -130,7 +150,10 @@ export function Toolbar({ canvasHandleRef, onOpenMockup }: ToolbarProps) {
         <button
           type="button"
           className="toolbar-primary"
-          onClick={() => canvasHandleRef.current?.exportPng()}
+          onClick={() => {
+            canvasHandleRef.current?.exportPng()
+            onToast('PNG로 내보냈습니다.')
+          }}
         >
           PNG 내보내기
         </button>

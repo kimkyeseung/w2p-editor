@@ -23,6 +23,14 @@ interface EditorState {
     transform: Partial<Pick<EditorLayer, 'x' | 'y' | 'width' | 'height' | 'rotation'>>,
   ) => void
   updateTextStyle: (id: string, style: Partial<Omit<TextLayer, keyof EditorLayer | 'type'>>) => void
+  // Fabric fires one `object:modified` event for both a transform drag AND
+  // Fabric's own inline text-editing (double-click on the canvas) — this
+  // applies both in one history entry so canvas-driven edits aren't lost
+  // the next time the store re-syncs the object from stale layer data.
+  applyCanvasModification: (
+    id: string,
+    patch: Partial<Pick<EditorLayer, 'x' | 'y' | 'width' | 'height' | 'rotation'>> & { text?: string },
+  ) => void
   renameLayer: (id: string, name: string) => void
   removeLayer: (id: string) => void
   duplicateLayer: (id: string) => void
@@ -77,7 +85,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       height: 28,
       rotation: 0,
       text: '텍스트를 입력하세요',
-      fontFamily: 'Arial',
+      fontFamily: 'Noto Sans KR',
       fontSize: 24,
       color: '#111111',
       align: 'left',
@@ -117,6 +125,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       layers: state.layers.map((layer) =>
         layer.id === id ? { ...layer, ...transform } : layer,
       ),
+    }))
+  },
+
+  applyCanvasModification: (id, patch) => {
+    set((state) => ({
+      ...pushHistory(state),
+      layers: state.layers.map((layer) => {
+        if (layer.id !== id) return layer
+        const { text, ...transform } = patch
+        return layer.type === 'text' && text !== undefined
+          ? { ...layer, ...transform, text }
+          : { ...layer, ...transform }
+      }),
     }))
   },
 

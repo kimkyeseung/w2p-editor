@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-08-24T08:53:30.471Z",
+  "lastUpdated": "2026-08-24T12:56:49.036Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -9,7 +9,8 @@
     "Toolbar",
     "LayerPanel",
     "PropertiesPanel",
-    "MockupPreview"
+    "MockupPreview",
+    "Toast"
   ],
   "primaryFeature": "w2p-editor",
   "features": {
@@ -33,9 +34,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:40:10.127Z",
-        "lastUpdated": "2026-08-24T03:00:56.148Z"
+        "lastUpdated": "2026-08-24T12:52:10.232Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/types/editor.ts"
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/App.tsx"
     },
     "store": {
       "phase": "do",
@@ -46,7 +47,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:41:19.891Z",
-        "lastUpdated": "2026-08-24T03:01:33.265Z"
+        "lastUpdated": "2026-08-24T12:49:30.592Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/store/editorStore.ts"
     },
@@ -59,7 +60,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:45:57.583Z",
-        "lastUpdated": "2026-08-24T08:53:30.471Z"
+        "lastUpdated": "2026-08-24T12:56:49.036Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Canvas/Canvas.tsx"
     },
@@ -72,7 +73,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:46:20.922Z",
-        "lastUpdated": "2026-08-23T18:43:49.897Z"
+        "lastUpdated": "2026-08-24T12:52:41.975Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Toolbar/Toolbar.tsx"
     },
@@ -98,7 +99,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:47:41.315Z",
-        "lastUpdated": "2026-08-23T17:47:41.315Z"
+        "lastUpdated": "2026-08-24T12:49:17.955Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/PropertiesPanel/PropertiesPanel.tsx"
     },
@@ -114,6 +115,19 @@
         "lastUpdated": "2026-08-23T18:42:57.512Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/MockupPreview/MockupPreview.tsx"
+    },
+    "Toast": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-08-24T12:51:28.518Z",
+        "lastUpdated": "2026-08-24T12:51:28.518Z"
+      },
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Toast/Toast.tsx"
     }
   },
   "pipeline": {
@@ -124,7 +138,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-08-24T08:53:30.471Z"
+    "lastActivity": "2026-08-24T12:56:49.036Z"
   },
   "history": [
     {
@@ -459,6 +473,132 @@
     },
     {
       "timestamp": "2026-08-24T08:53:30.471Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:47:48.957Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:48:01.247Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:48:22.223Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:48:38.257Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:48:51.318Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:49:17.955Z",
+      "feature": "PropertiesPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:49:30.592Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:50:24.591Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:50:37.522Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:51:08.080Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:51:16.424Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:51:28.518Z",
+      "feature": "Toast",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:51:49.653Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:51:56.505Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:52:03.697Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:52:10.232Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:52:17.609Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:52:24.744Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:52:41.975Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:54:16.287Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T12:56:49.036Z",
       "feature": "Canvas",
       "phase": "do",
       "action": "updated"

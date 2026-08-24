@@ -3,7 +3,16 @@ import { useEditorStore } from '../../store/editorStore'
 import type { TextLayer } from '../../types/editor'
 import './PropertiesPanel.css'
 
-const FONT_OPTIONS = ['Arial', 'Georgia', 'Times New Roman', 'Verdana', 'Courier New', 'Comic Sans MS']
+const FONT_OPTIONS = [
+  'Noto Sans KR',
+  'Nanum Gothic',
+  'Nanum Myeongjo',
+  'Arial',
+  'Georgia',
+  'Times New Roman',
+  'Verdana',
+  'Courier New',
+]
 
 interface NumberFieldProps {
   label: string
