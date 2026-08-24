@@ -44,16 +44,22 @@ const topLeftFromObject = (obj: fabric.FabricObject) => {
   }
 }
 
+// `visible` was added after the first release, so projects saved before it
+// existed don't have the field — treat only an explicit `false` as hidden.
+const isLayerVisible = (layer: Pick<EditorLayer, 'visible'>) => layer.visible !== false
+
 const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer) => {
   const { centerX, centerY } = centerFromTopLeft(layer)
+  const visible = isLayerVisible(layer)
   obj.set({
     originX: 'center',
     originY: 'center',
     left: centerX,
     top: centerY,
     angle: layer.rotation,
-    selectable: !layer.locked,
-    evented: !layer.locked,
+    visible,
+    selectable: !layer.locked && visible,
+    evented: !layer.locked && visible,
   })
 }
 
@@ -75,6 +81,7 @@ const applyTextLayer = (obj: fabric.Textbox, layer: TextLayer) => {
 
 const createTextObject = (layer: TextLayer): fabric.Textbox => {
   const { centerX, centerY } = centerFromTopLeft(layer)
+  const visible = isLayerVisible(layer)
   const textbox = new fabric.Textbox(layer.text, {
     originX: 'center',
     originY: 'center',
@@ -86,8 +93,9 @@ const createTextObject = (layer: TextLayer): fabric.Textbox => {
     fill: layer.color,
     textAlign: layer.align,
     angle: layer.rotation,
-    selectable: !layer.locked,
-    evented: !layer.locked,
+    visible,
+    selectable: !layer.locked && visible,
+    evented: !layer.locked && visible,
   })
   return textbox
 }
@@ -139,6 +147,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const [zoom, setZoom] = useState(1)
   const [panMode, setPanMode] = useState(false)
   const [spaceHeld, setSpaceHeld] = useState(false)
+  const [showGuides, setShowGuides] = useState(true)
   const isPanning = panMode || spaceHeld
 
   const layers = useEditorStore((s) => s.layers)
@@ -483,31 +492,33 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
             style={{ width: totalWidth, height: totalHeight, transform: `scale(${zoom})` }}
           >
             <canvas ref={canvasElRef} width={totalWidth} height={totalHeight} />
-            <div className="canvas-guides" aria-hidden="true">
-              <svg width={totalWidth} height={totalHeight}>
-                <rect
-                  className="guide-bleed"
-                  x={0.5}
-                  y={0.5}
-                  width={totalWidth - 1}
-                  height={totalHeight - 1}
-                />
-                <rect
-                  className="guide-trim"
-                  x={bleedPx}
-                  y={bleedPx}
-                  width={trimWidthPx}
-                  height={trimHeightPx}
-                />
-                <rect
-                  className="guide-safe"
-                  x={bleedPx + safePx}
-                  y={bleedPx + safePx}
-                  width={Math.max(trimWidthPx - safePx * 2, 0)}
-                  height={Math.max(trimHeightPx - safePx * 2, 0)}
-                />
-              </svg>
-            </div>
+            {showGuides && (
+              <div className="canvas-guides" aria-hidden="true">
+                <svg width={totalWidth} height={totalHeight}>
+                  <rect
+                    className="guide-bleed"
+                    x={0.5}
+                    y={0.5}
+                    width={totalWidth - 1}
+                    height={totalHeight - 1}
+                  />
+                  <rect
+                    className="guide-trim"
+                    x={bleedPx}
+                    y={bleedPx}
+                    width={trimWidthPx}
+                    height={trimHeightPx}
+                  />
+                  <rect
+                    className="guide-safe"
+                    x={bleedPx + safePx}
+                    y={bleedPx + safePx}
+                    width={Math.max(trimWidthPx - safePx * 2, 0)}
+                    height={Math.max(trimHeightPx - safePx * 2, 0)}
+                  />
+                </svg>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -527,6 +538,14 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       )}
 
       <div className="canvas-view-controls">
+        <button
+          type="button"
+          className={showGuides ? 'is-active' : ''}
+          onClick={() => setShowGuides((v) => !v)}
+          title="재단선/안전영역 가이드 표시 전환"
+        >
+          {showGuides ? '▦' : '▢'}
+        </button>
         <button
           type="button"
           className={panMode ? 'is-active' : ''}

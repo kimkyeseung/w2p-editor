@@ -5,6 +5,7 @@ export interface LayerBase {
   type: LayerType
   name: string
   locked: boolean
+  visible: boolean
   x: number
   y: number
   width: number

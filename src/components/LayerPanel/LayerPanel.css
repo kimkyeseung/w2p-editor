@@ -48,6 +48,11 @@
   border-color: #93c5fd;
 }
 
+.layer-row.is-hidden .layer-name,
+.layer-row.is-hidden .layer-type-icon {
+  opacity: 0.4;
+}
+
 .layer-type-icon {
   width: 1.4rem;
   text-align: center;

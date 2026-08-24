@@ -27,6 +27,7 @@ interface EditorState {
   removeLayer: (id: string) => void
   duplicateLayer: (id: string) => void
   toggleLock: (id: string) => void
+  toggleVisible: (id: string) => void
   reorderLayer: (id: string, direction: 'front' | 'back' | 'forward' | 'backward') => void
   alignLayer: (id: string, alignment: 'left' | 'center-x' | 'right' | 'top' | 'center-y' | 'bottom') => void
   selectLayer: (id: string | null) => void
@@ -69,6 +70,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       type: 'text',
       name: `텍스트 ${get().layers.filter((l) => l.type === 'text').length + 1}`,
       locked: false,
+      visible: true,
       x: 40,
       y: 40,
       width: 200,
@@ -94,6 +96,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       type: 'image',
       name: `이미지 ${get().layers.filter((l) => l.type === 'image').length + 1}`,
       locked: false,
+      visible: true,
       x: 40,
       y: 40,
       width,
@@ -165,6 +168,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         layer.id === id ? { ...layer, locked: !layer.locked } : layer,
       ),
     }))
+  },
+
+  toggleVisible: (id) => {
+    set((state) => {
+      const layer = state.layers.find((l) => l.id === id)
+      if (!layer) return state
+      const nextVisible = !(layer.visible !== false)
+      return {
+        ...pushHistory(state),
+        layers: state.layers.map((l) => (l.id === id ? { ...l, visible: nextVisible } : l)),
+        selectedId: !nextVisible && state.selectedId === id ? null : state.selectedId,
+      }
+    })
   },
 
   reorderLayer: (id, direction) => {
