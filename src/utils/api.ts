@@ -1,11 +1,8 @@
 import type { ApiProject, EditorLayer } from '../types/editor'
 
-// Dummy REST API (json-server) demonstrating the fetch/CRUD flow the job
-// posting asks for. Run `npm run api` locally to serve it from db.json —
-// the deployed site has no backend to talk to, so requests there fail with
-// a network error, which the UI surfaces as a clear "run it locally" hint
-// rather than a silent/broken feature.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'
+// REST API backed by Vercel Functions + Blob storage (see api/projects/), deployed
+// alongside the frontend — no separate backend or hosting to manage.
+const API_BASE_URL = '/api'
 
 export const fetchProjects = async (): Promise<ApiProject[]> => {
   const res = await fetch(`${API_BASE_URL}/projects`)
@@ -21,7 +18,7 @@ export const createProject = async (
   const res = await fetch(`${API_BASE_URL}/projects`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, presetId, layers, savedAt: new Date().toISOString() }),
+    body: JSON.stringify({ name, presetId, layers }),
   })
   if (!res.ok) throw new Error(`POST /projects failed: ${res.status}`)
   return res.json()

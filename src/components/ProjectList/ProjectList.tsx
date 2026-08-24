@@ -38,9 +38,12 @@ export function ProjectList({ currentPresetId, currentLayers, onLoad, onClose }:
     const name = saveName.trim() || `프로젝트 ${new Date().toLocaleString('ko-KR')}`
     setSaving(true)
     try {
-      await createProject(name, currentPresetId, currentLayers)
+      // Append the server's response directly instead of re-fetching the list —
+      // the blob store the API sits on is only eventually consistent across
+      // writes, so a GET immediately after this POST can still race and miss it.
+      const created = await createProject(name, currentPresetId, currentLayers)
+      setProjects((prev) => [...prev, created])
       setSaveName('')
-      await refresh()
     } catch {
       window.alert('저장하지 못했습니다. API 서버 연결을 확인해주세요.')
     } finally {
@@ -51,7 +54,7 @@ export function ProjectList({ currentPresetId, currentLayers, onLoad, onClose }:
   const handleDelete = async (id: string) => {
     try {
       await deleteProject(id)
-      await refresh()
+      setProjects((prev) => prev.filter((p) => p.id !== id))
     } catch {
       window.alert('삭제하지 못했습니다.')
     }
@@ -76,8 +79,9 @@ export function ProjectList({ currentPresetId, currentLayers, onLoad, onClose }:
 
         {status === 'error' && (
           <p className="project-list-status project-list-error">
-            API 서버에 연결할 수 없습니다. 로컬에서 <code>npm run api</code>로 더미 REST
-            서버(json-server)를 띄운 뒤 다시 시도해주세요.
+            API 서버에 연결할 수 없습니다. <code>npm run dev</code>(Vite 단독 실행)로는 API
+            라우트가 뜨지 않으니, 로컬에서 확인하려면 <code>npm run dev:api</code>
+            (vercel dev)로 실행한 뒤 다시 시도해주세요.
           </p>
         )}
 
@@ -109,8 +113,8 @@ export function ProjectList({ currentPresetId, currentLayers, onLoad, onClose }:
         )}
 
         <p className="project-list-hint">
-          GET/POST/DELETE로 json-server와 통신하는 REST API 연동 데모입니다 (저장소: <code>db.json</code>
-          ).
+          GET/POST/DELETE로 Vercel Functions API(<code>api/projects</code>)와 통신하는 REST API
+          연동 데모입니다. 데이터는 Vercel Blob에 저장되어 배포된 사이트에서도 그대로 동작합니다.
         </p>
     </Modal>
   )
