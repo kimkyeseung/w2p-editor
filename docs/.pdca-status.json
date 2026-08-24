@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-08-24T03:03:04.216Z",
+  "lastUpdated": "2026-08-24T08:53:30.471Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -59,7 +59,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:45:57.583Z",
-        "lastUpdated": "2026-08-24T03:02:41.204Z"
+        "lastUpdated": "2026-08-24T08:53:30.471Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Canvas/Canvas.tsx"
     },
@@ -124,7 +124,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-08-24T03:03:04.216Z"
+    "lastActivity": "2026-08-24T08:53:30.471Z"
   },
   "history": [
     {
@@ -424,6 +424,42 @@
     {
       "timestamp": "2026-08-24T03:03:04.216Z",
       "feature": "LayerPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T08:52:16.743Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T08:52:29.127Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T08:52:50.648Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T08:52:59.659Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T08:53:14.305Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T08:53:30.471Z",
+      "feature": "Canvas",
       "phase": "do",
       "action": "updated"
     }

@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import * as fabric from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
@@ -125,26 +125,19 @@ const isTypingTarget = (target: EventTarget | null): boolean => {
   )
 }
 
-interface ZoomAnchor {
-  containerX: number
-  containerY: number
-  clientX: number
-  clientY: number
-  prevZoom: number
-}
-
 export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const canvasElRef = useRef<HTMLCanvasElement>(null)
   const zoomFrameRef = useRef<HTMLDivElement>(null)
+  const canvasScrollRef = useRef<HTMLDivElement>(null)
   const fabricRef = useRef<fabric.Canvas | null>(null)
   const idToObject = useRef(new Map<string, fabric.FabricObject>())
   const objectToId = useRef(new WeakMap<fabric.FabricObject, string>())
   const pendingImageIds = useRef(new Set<string>())
   const pinchStateRef = useRef<{ distance: number; zoom: number } | null>(null)
-  const zoomAnchorRef = useRef<ZoomAnchor | null>(null)
-  const panDragRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null)
+  const panDragRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number } | null>(null)
 
   const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
   const [panMode, setPanMode] = useState(false)
   const [spaceHeld, setSpaceHeld] = useState(false)
   const [showGuides, setShowGuides] = useState(true)
@@ -165,28 +158,50 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const totalWidth = trimWidthPx + bleedPx * 2
   const totalHeight = trimHeightPx + bleedPx * 2
 
+  // The zoom-frame is centered in canvas-scroll by flexbox, then shifted by
+  // `pan` on top of that centered baseline (translate, not scroll) — so,
+  // like Photoshop CS4+, dragging with the hand tool always moves the canvas
+  // regardless of zoom level, even when it's fully visible and there's
+  // nothing to natively scroll.
+  const frameRect = (zoomLevel: number, panX: number, panY: number) => {
+    const container = canvasScrollRef.current
+    if (!container) return null
+    const rect = container.getBoundingClientRect()
+    const frameWidth = totalWidth * zoomLevel
+    const frameHeight = totalHeight * zoomLevel
+    return {
+      left: rect.left + (rect.width - frameWidth) / 2 + panX,
+      top: rect.top + (rect.height - frameHeight) / 2 + panY,
+      containerRect: rect,
+    }
+  }
+
   // Zoom centered on a viewport (client) point, keeping that point visually
   // fixed under the cursor — same UX as Figma/Photoshop's ctrl/cmd+wheel zoom.
   const applyZoomAtPoint = (nextZoomRaw: number, clientX: number, clientY: number) => {
-    const container = zoomFrameRef.current?.parentElement
     const nextZoom = clampZoom(nextZoomRaw)
-    if (!container) {
+    const before = frameRect(zoom, pan.x, pan.y)
+    if (!before) {
       setZoom(nextZoom)
       return
     }
-    const rect = container.getBoundingClientRect()
-    zoomAnchorRef.current = {
-      containerX: container.scrollLeft + (clientX - rect.left),
-      containerY: container.scrollTop + (clientY - rect.top),
-      clientX,
-      clientY,
-      prevZoom: zoom,
-    }
+    const ratio = nextZoom / zoom
+    // Content-space point under the cursor (old zoom's pixels) stays put:
+    // scale it into the new frame and re-derive the pan that keeps its
+    // screen position unchanged.
+    const contentX = (clientX - before.left) * ratio
+    const contentY = (clientY - before.top) * ratio
+    const frameWidthNew = totalWidth * nextZoom
+    const frameHeightNew = totalHeight * nextZoom
+    const { containerRect } = before
+    const nextPanX = clientX - contentX - containerRect.left - (containerRect.width - frameWidthNew) / 2
+    const nextPanY = clientY - contentY - containerRect.top - (containerRect.height - frameHeightNew) / 2
     setZoom(nextZoom)
+    setPan({ x: nextPanX, y: nextPanY })
   }
 
   const zoomByFactor = (factor: number) => {
-    const container = zoomFrameRef.current?.parentElement
+    const container = canvasScrollRef.current
     if (!container) {
       setZoom((z) => clampZoom(z * factor))
       return
@@ -196,29 +211,20 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   }
 
   const fitToScreen = () => {
-    const container = zoomFrameRef.current?.parentElement
+    const container = canvasScrollRef.current
     if (!container) return
     const availW = container.clientWidth - VIEWPORT_PADDING
     const availH = container.clientHeight - VIEWPORT_PADDING
     const fit = Math.min(availW / totalWidth, availH / totalHeight)
-    if (Number.isFinite(fit) && fit > 0) setZoom(clampZoom(fit))
+    if (Number.isFinite(fit) && fit > 0) {
+      setZoom(clampZoom(fit))
+      setPan({ x: 0, y: 0 })
+    }
   }
-
-  // After the zoom-driven re-render, restore the anchor point under the cursor.
-  useLayoutEffect(() => {
-    const anchor = zoomAnchorRef.current
-    const container = zoomFrameRef.current?.parentElement
-    if (!anchor || !container) return
-    zoomAnchorRef.current = null
-    const rect = container.getBoundingClientRect()
-    const ratio = zoom / anchor.prevZoom
-    container.scrollLeft = anchor.containerX * ratio - (anchor.clientX - rect.left)
-    container.scrollTop = anchor.containerY * ratio - (anchor.clientY - rect.top)
-  }, [zoom])
 
   // Ctrl/Cmd + wheel to zoom, anchored at the cursor.
   useEffect(() => {
-    const container = zoomFrameRef.current?.parentElement
+    const container = canvasScrollRef.current
     if (!container) return
     const handleWheel = (e: WheelEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return
@@ -229,7 +235,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     container.addEventListener('wheel', handleWheel, { passive: false })
     return () => container.removeEventListener('wheel', handleWheel)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zoom])
+  }, [zoom, pan])
 
   // Hold Space for a temporary hand tool, Photoshop/Figma-style.
   useEffect(() => {
@@ -254,22 +260,16 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   }, [])
 
   const handlePanPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    const container = zoomFrameRef.current?.parentElement
-    if (!container) return
-    panDragRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      scrollLeft: container.scrollLeft,
-      scrollTop: container.scrollTop,
-    }
+    panDragRef.current = { x: e.clientX, y: e.clientY, startPanX: pan.x, startPanY: pan.y }
     e.currentTarget.setPointerCapture(e.pointerId)
   }
   const handlePanPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const drag = panDragRef.current
-    const container = zoomFrameRef.current?.parentElement
-    if (!drag || !container) return
-    container.scrollLeft = drag.scrollLeft - (e.clientX - drag.x)
-    container.scrollTop = drag.scrollTop - (e.clientY - drag.y)
+    if (!drag) return
+    setPan({
+      x: drag.startPanX + (e.clientX - drag.x),
+      y: drag.startPanY + (e.clientY - drag.y),
+    })
   }
   const handlePanPointerUp = () => {
     panDragRef.current = null
@@ -330,13 +330,14 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     canvas.setDimensions({ width: totalWidth, height: totalHeight })
     canvas.requestRenderAll()
 
-    const container = zoomFrameRef.current?.parentElement
+    const container = canvasScrollRef.current
     if (container) {
       const availW = container.clientWidth - VIEWPORT_PADDING
       const availH = container.clientHeight - VIEWPORT_PADDING
       const fit = Math.min(availW / totalWidth, availH / totalHeight, 1)
       if (Number.isFinite(fit) && fit > 0) setZoom(clampZoom(fit))
     }
+    setPan({ x: 0, y: 0 })
   }, [totalWidth, totalHeight])
 
   // Two-finger pinch to zoom the canvas view (mobile touch support), sharing
@@ -477,15 +478,22 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
 
   return (
     <div className="canvas-viewport">
-      {/* This scroll container is what zoomFrameRef.parentElement refers to
-          throughout this component. The view controls below live outside it
-          (as a sibling) specifically so they stay pinned to the viewport
-          corner instead of scrolling away with the zoomed/panned content. */}
-      <div className="canvas-scroll">
+      {/* canvas-scroll only centers the frame as a baseline now — panning is
+          a `pan` state translate on top of that, not native scrolling, so
+          the hand tool can move the canvas freely at any zoom level (even
+          zoomed out with nothing to "scroll"), like Photoshop's canvas pan.
+          The view controls below live outside this div (as a sibling) so
+          they stay pinned to the viewport corner instead of panning away
+          with the content. */}
+      <div className="canvas-scroll" ref={canvasScrollRef}>
         <div
           ref={zoomFrameRef}
           className="canvas-zoom-frame"
-          style={{ width: totalWidth * zoom, height: totalHeight * zoom }}
+          style={{
+            width: totalWidth * zoom,
+            height: totalHeight * zoom,
+            transform: `translate(${pan.x}px, ${pan.y}px)`,
+          }}
         >
           <div
             className="canvas-stage"

@@ -7,13 +7,13 @@
 .canvas-scroll {
   position: absolute;
   inset: 0;
-  overflow: auto;
+  /* Panning is a CSS transform (see canvas-zoom-frame), not native scroll —
+     this just clips the frame once it's panned past the visible area and
+     provides the centered baseline that panning offsets from. */
+  overflow: hidden;
   display: flex;
-  /* "safe" keeps the start edge (e.g. the top of a tall poster) reachable by
-     scrolling instead of being permanently clipped once content overflows a
-     centered flex container — the classic flexbox centering + overflow trap. */
-  align-items: safe center;
-  justify-content: safe center;
+  align-items: center;
+  justify-content: center;
   padding: 2rem;
 }
 
