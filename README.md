@@ -37,8 +37,9 @@ npm run api        # http://localhost:4000 (db.json 기반)
 - **반응형/모바일**: 좁은 화면에서는 레이어/속성 패널이 하단 탭으로 전환, 캔버스에서 두 손가락 핀치 줌 지원
 - **줌/팬**: 우측 하단 플로팅 컨트롤 또는 Ctrl/Cmd+휠로 커서 위치 기준 확대·축소, 손 도구(스페이스바)로 자유 패닝 (Photoshop CS4+ 방식 — 줌 상태와 무관하게 항상 이동 가능)
 - **정렬 스냅 가이드**: 오브젝트를 드래그하면 캔버스 중심/가장자리나 다른 오브젝트의 가장자리·중심에 자동으로 스냅 (Figma/일러스트레이터 스타일)
-- **(스트레치) 상품 목업 미리보기**: 티셔츠/머그컵 SVG 목업 위에 현재 디자인을 오버레이해서 미리보기
-- **(스트레치) 더미 REST API 연동**: json-server로 "프로젝트 목록"을 GET/POST/DELETE — 저장·불러오기·삭제 흐름을 실제 REST 호출로 시연 (`npm run api`)
+- **다중 선택 및 그룹 이동**: Shift/Cmd/Ctrl+클릭으로 여러 레이어를 선택해 한 번에 드래그·복제·삭제 (Fabric.js `ActiveSelection` 활용)
+- **(스트레치) 상품 목업 미리보기**: 명함/포스터/정사각 카드 각각 실제 비율에 맞춘 SVG 목업 위에 현재 디자인을 오버레이해서 미리보기 (현재 캔버스 규격과 일치하는 목업이 기본 선택됨)
+- **(스트레치) 더미 REST API 연동**: json-server로 "프로젝트 목록"을 GET/POST/DELETE — 이름 붙여 저장·불러오기·삭제 흐름을 실제 REST 호출로 시연 (`npm run api`)
 
 ## 기술 스택
 
@@ -51,8 +52,11 @@ src/
   components/
     Canvas/            Fabric.js 캔버스 래퍼 (렌더링 + 좌표 변환 + 이벤트 동기화)
     Toolbar/           프리셋 선택, 레이어 추가, 실행취소/저장/내보내기
-    LayerPanel/         레이어 목록 및 조작
+    LayerPanel/         레이어 목록 및 조작 (다중 선택 지원)
     PropertiesPanel/    선택 객체 속성 편집
+    MockupPreview/      명함/포스터/정사각 카드 SVG 목업 미리보기
+    ProjectList/         더미 REST API 기반 프로젝트 목록 저장/불러오기
+    common/              여러 화면에서 재사용하는 Modal, NumberField 등
   store/editorStore.ts  Zustand 스토어 (레이어, 선택, undo/redo 히스토리)
   types/editor.ts        레이어/프리셋 타입 정의
   utils/
@@ -73,12 +77,5 @@ Fabric.js 6+ 는 객체의 기준점(`originX`/`originY`)이 기본값 `center`�
 | REST/GraphQL API 연동, 반응형/모바일웹 | json-server 기반 REST API로 프로젝트 목록 GET/POST/DELETE(`src/utils/api.ts`), JSON 파일 저장/불러오기, 모바일 탭 레이아웃 + 터치 핀치 줌 |
 | Canvas 2D, SVG, 좌표 변환, Fabric.js | Fabric.js 캔버스 렌더링, bleed/safe area 가이드는 SVG 오버레이, center↔top-left 좌표 변환 로직 |
 | 그래픽 에디터 서비스 개발 경험 | 레이어 추가/선택/transform/레이어 순서/속성 편집 등 에디터 핵심 플로우 구현 |
-| 재사용 가능한 컴포넌트/디자인 시스템 | `PropertiesPanel`의 `NumberField`처럼 공통 입력 컴포넌트를 재사용 가능한 형태로 분리 |
+| 재사용 가능한 컴포넌트/디자인 시스템 | `src/components/common/`에 `Modal`, `NumberField` 등 여러 화면에서 재사용하는 컴포넌트를 분리 |
 | AI 기반 개발 도구 활용 경험 | 이 프로젝트 자체를 Claude Code와 함께 PDCA(계획→설계→구현→검증) 방식으로 진행 |
-
-## 남은 스트레치 목표
-
-- 다중 선택 및 그룹화
-- 공통 컴포넌트 라이브러리화
-- 여러 프로젝트를 이름 붙여 관리(현재는 localStorage 1개 슬롯, REST API 목록은 지원)
-- 목업 카테고리(티셔츠/머그컵)와 템플릿(명함/포스터) 정합성 개선
