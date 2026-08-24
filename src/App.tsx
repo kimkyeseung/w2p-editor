@@ -37,8 +37,8 @@ function App() {
 
   const undo = useEditorStore((s) => s.undo)
   const redo = useEditorStore((s) => s.redo)
-  const removeLayer = useEditorStore((s) => s.removeLayer)
-  const selectedId = useEditorStore((s) => s.selectedId)
+  const removeLayers = useEditorStore((s) => s.removeLayers)
+  const selectedIds = useEditorStore((s) => s.selectedIds)
   const layers = useEditorStore((s) => s.layers)
   const presetId = useEditorStore((s) => s.presetId)
   const replaceAll = useEditorStore((s) => s.replaceAll)
@@ -53,14 +53,14 @@ function App() {
         else undo()
         return
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
         e.preventDefault()
-        removeLayer(selectedId)
+        removeLayers(selectedIds)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo, removeLayer, selectedId])
+  }, [undo, redo, removeLayers, selectedIds])
 
   const handleOpenMockup = () => {
     const dataUrl = canvasHandleRef.current?.getDesignDataUrl()

@@ -5,12 +5,19 @@ import { DEFAULT_PRESET_ID, getPresetById, mmToPx } from '../utils/presets'
 interface HistoryEntry {
   layers: EditorLayer[]
   selectedId: string | null
+  selectedIds: string[]
   presetId: string
 }
 
 interface EditorState {
   layers: EditorLayer[]
+  // `selectedId` is kept as the "primary" selection (set whenever exactly
+  // one layer is selected) so existing single-object UI — the properties
+  // panel's field editing, canvas.setActiveObject — doesn't need to branch
+  // on multi-select. `selectedIds` is the full set for multi-select-aware
+  // UI (layer panel highlighting, batch delete/duplicate).
   selectedId: string | null
+  selectedIds: string[]
   presetId: string
   past: HistoryEntry[]
   future: HistoryEntry[]
@@ -33,12 +40,16 @@ interface EditorState {
   ) => void
   renameLayer: (id: string, name: string) => void
   removeLayer: (id: string) => void
+  removeLayers: (ids: string[]) => void
   duplicateLayer: (id: string) => void
+  duplicateLayers: (ids: string[]) => void
   toggleLock: (id: string) => void
   toggleVisible: (id: string) => void
   reorderLayer: (id: string, direction: 'front' | 'back' | 'forward' | 'backward') => void
   alignLayer: (id: string, alignment: 'left' | 'center-x' | 'right' | 'top' | 'center-y' | 'bottom') => void
   selectLayer: (id: string | null) => void
+  selectLayers: (ids: string[]) => void
+  toggleSelectLayer: (id: string) => void
   replaceAll: (layers: EditorLayer[], presetId: string) => void
   undo: () => void
   redo: () => void
@@ -52,6 +63,7 @@ const createId = () =>
 const snapshotOf = (state: EditorState): HistoryEntry => ({
   layers: state.layers,
   selectedId: state.selectedId,
+  selectedIds: state.selectedIds,
   presetId: state.presetId,
 })
 
@@ -63,6 +75,7 @@ const pushHistory = (state: EditorState): Pick<EditorState, 'past' | 'future'> =
 export const useEditorStore = create<EditorState>((set, get) => ({
   layers: [],
   selectedId: null,
+  selectedIds: [],
   presetId: DEFAULT_PRESET_ID,
   past: [],
   future: [],
@@ -94,6 +107,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushHistory(state),
       layers: [...state.layers, newLayer],
       selectedId: id,
+      selectedIds: [id],
     }))
   },
 
@@ -116,6 +130,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushHistory(state),
       layers: [...state.layers, newLayer],
       selectedId: id,
+      selectedIds: [id],
     }))
   },
 
@@ -161,6 +176,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushHistory(state),
       layers: state.layers.filter((layer) => layer.id !== id),
       selectedId: state.selectedId === id ? null : state.selectedId,
+      selectedIds: state.selectedIds.filter((sid) => sid !== id),
+    }))
+  },
+
+  removeLayers: (ids) => {
+    if (ids.length === 0) return
+    const idSet = new Set(ids)
+    set((state) => ({
+      ...pushHistory(state),
+      layers: state.layers.filter((layer) => !idSet.has(layer.id)),
+      selectedId: null,
+      selectedIds: [],
     }))
   },
 
@@ -179,7 +206,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushHistory(state),
       layers: [...state.layers, clone],
       selectedId: newId,
+      selectedIds: [newId],
     }))
+  },
+
+  duplicateLayers: (ids) => {
+    if (ids.length === 0) return
+    set((state) => {
+      const idSet = new Set(ids)
+      const sources = state.layers.filter((layer) => idSet.has(layer.id))
+      const clones = sources.map((source) => ({
+        ...source,
+        id: createId(),
+        name: `${source.name} 사본`,
+        x: source.x + 16,
+        y: source.y + 16,
+      }))
+      return {
+        ...pushHistory(state),
+        layers: [...state.layers, ...clones],
+        selectedId: clones.length === 1 ? clones[0].id : null,
+        selectedIds: clones.map((c) => c.id),
+      }
+    })
   },
 
   toggleLock: (id) => {
@@ -196,10 +245,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const layer = state.layers.find((l) => l.id === id)
       if (!layer) return state
       const nextVisible = !(layer.visible !== false)
+      const stillSelected = nextVisible || state.selectedId !== id
       return {
         ...pushHistory(state),
         layers: state.layers.map((l) => (l.id === id ? { ...l, visible: nextVisible } : l)),
-        selectedId: !nextVisible && state.selectedId === id ? null : state.selectedId,
+        selectedId: stillSelected ? state.selectedId : null,
+        selectedIds: stillSelected ? state.selectedIds : state.selectedIds.filter((sid) => sid !== id),
       }
     })
   },
@@ -242,7 +293,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   selectLayer: (id) => {
-    set({ selectedId: id })
+    set({ selectedId: id, selectedIds: id ? [id] : [] })
+  },
+
+  selectLayers: (ids) => {
+    set({ selectedId: ids.length === 1 ? ids[0] : null, selectedIds: ids })
+  },
+
+  toggleSelectLayer: (id) => {
+    set((state) => {
+      const nextIds = state.selectedIds.includes(id)
+        ? state.selectedIds.filter((sid) => sid !== id)
+        : [...state.selectedIds, id]
+      return { selectedId: nextIds.length === 1 ? nextIds[0] : null, selectedIds: nextIds }
+    })
   },
 
   replaceAll: (layers, presetId) => {
@@ -251,32 +315,35 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       layers,
       presetId,
       selectedId: null,
+      selectedIds: [],
     }))
   },
 
   undo: () => {
-    const { past, layers, selectedId, presetId, future } = get()
+    const { past, layers, selectedId, selectedIds, presetId, future } = get()
     if (past.length === 0) return
     const previous = past[past.length - 1]
     set({
       layers: previous.layers,
       selectedId: previous.selectedId,
+      selectedIds: previous.selectedIds,
       presetId: previous.presetId,
       past: past.slice(0, -1),
-      future: [{ layers, selectedId, presetId }, ...future].slice(0, MAX_HISTORY),
+      future: [{ layers, selectedId, selectedIds, presetId }, ...future].slice(0, MAX_HISTORY),
     })
   },
 
   redo: () => {
-    const { future, layers, selectedId, presetId, past } = get()
+    const { future, layers, selectedId, selectedIds, presetId, past } = get()
     if (future.length === 0) return
     const next = future[0]
     set({
       layers: next.layers,
       selectedId: next.selectedId,
+      selectedIds: next.selectedIds,
       presetId: next.presetId,
       future: future.slice(1),
-      past: [...past, { layers, selectedId, presetId }].slice(-MAX_HISTORY),
+      past: [...past, { layers, selectedId, selectedIds, presetId }].slice(-MAX_HISTORY),
     })
   },
 }))

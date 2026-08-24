@@ -64,12 +64,26 @@ function NumberField({ label, value, suffix, onCommit }: NumberFieldProps) {
 export function PropertiesPanel() {
   const layers = useEditorStore((s) => s.layers)
   const selectedId = useEditorStore((s) => s.selectedId)
+  const selectedIds = useEditorStore((s) => s.selectedIds)
   const updateLayerTransform = useEditorStore((s) => s.updateLayerTransform)
   const updateTextStyle = useEditorStore((s) => s.updateTextStyle)
   const renameLayer = useEditorStore((s) => s.renameLayer)
   const alignLayer = useEditorStore((s) => s.alignLayer)
 
   const layer = layers.find((l) => l.id === selectedId)
+
+  if (selectedIds.length > 1) {
+    return (
+      <div className="properties-panel">
+        <h2 className="panel-title">속성</h2>
+        <p className="prop-empty">
+          {selectedIds.length}개 오브젝트가 선택되었습니다.
+          <br />
+          함께 드래그해서 이동하거나, 레이어 패널에서 일괄 복제/삭제할 수 있습니다.
+        </p>
+      </div>
+    )
+  }
 
   if (!layer) {
     return (

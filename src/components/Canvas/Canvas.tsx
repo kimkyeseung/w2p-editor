@@ -161,9 +161,9 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   }, [zoom])
 
   const layers = useEditorStore((s) => s.layers)
-  const selectedId = useEditorStore((s) => s.selectedId)
+  const selectedIds = useEditorStore((s) => s.selectedIds)
   const presetId = useEditorStore((s) => s.presetId)
-  const selectLayer = useEditorStore((s) => s.selectLayer)
+  const selectLayers = useEditorStore((s) => s.selectLayers)
   const applyCanvasModification = useEditorStore((s) => s.applyCanvasModification)
   const replaceAll = useEditorStore((s) => s.replaceAll)
 
@@ -301,9 +301,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     })
     fabricRef.current = canvas
 
-    const handleModified = (e: { target?: fabric.FabricObject }) => {
-      const target = e.target
-      if (!target) return
+    const applyModifiedTarget = (target: fabric.FabricObject) => {
       const id = objectToId.current.get(target)
       if (!id) return
       const topLeft = topLeftFromObject(target)
@@ -320,6 +318,21 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
         rotation: Math.round(target.angle ?? 0),
         ...(target instanceof fabric.Textbox ? { text: target.text ?? '' } : {}),
       })
+    }
+
+    const handleModified = (e: { target?: fabric.FabricObject }) => {
+      const target = e.target
+      if (!target) return
+      // Dragging/transforming a multi-selection fires one `object:modified`
+      // for the whole ActiveSelection group — write each child's own new
+      // position back individually so the store stays the source of truth
+      // per layer (an ActiveSelection is a transient Fabric wrapper, not a
+      // tracked layer, so objectToId has no entry for it).
+      if (target instanceof fabric.ActiveSelection) {
+        target.getObjects().forEach(applyModifiedTarget)
+      } else {
+        applyModifiedTarget(target)
+      }
       setAlignGuides({ vertical: [], horizontal: [] })
     }
 
@@ -395,11 +408,12 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     const clearAlignGuides = () => setAlignGuides({ vertical: [], horizontal: [] })
 
     const handleSelectionChange = (e: { selected?: fabric.FabricObject[] }) => {
-      const first = e.selected?.[0]
-      const id = first ? objectToId.current.get(first) ?? null : null
-      selectLayer(id)
+      const ids = (e.selected ?? [])
+        .map((obj) => objectToId.current.get(obj))
+        .filter((id): id is string => id !== undefined)
+      selectLayers(ids)
     }
-    const handleSelectionCleared = () => selectLayer(null)
+    const handleSelectionCleared = () => selectLayers([])
 
     canvas.on('object:modified', handleModified)
     canvas.on('object:moving', handleObjectMoving)
@@ -547,17 +561,31 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       }
     })
 
-    if (selectedId) {
-      const obj = idToObject.current.get(selectedId)
+    if (selectedIds.length === 0) {
+      if (canvas.getActiveObject()) canvas.discardActiveObject()
+    } else if (selectedIds.length === 1) {
+      const obj = idToObject.current.get(selectedIds[0])
       if (obj && canvas.getActiveObject() !== obj) {
         canvas.setActiveObject(obj)
       }
-    } else if (canvas.getActiveObject()) {
-      canvas.discardActiveObject()
+    } else {
+      const objs = selectedIds
+        .map((id) => idToObject.current.get(id))
+        .filter((o): o is fabric.FabricObject => o !== undefined)
+      if (objs.length > 1) {
+        const current = canvas.getActiveObject()
+        const alreadyMatches =
+          current instanceof fabric.ActiveSelection &&
+          current.size() === objs.length &&
+          objs.every((o) => current.getObjects().includes(o))
+        if (!alreadyMatches) {
+          canvas.setActiveObject(new fabric.ActiveSelection(objs, { canvas }))
+        }
+      }
     }
 
     canvas.requestRenderAll()
-  }, [layers, selectedId])
+  }, [layers, selectedIds])
 
   useImperativeHandle(ref, () => ({
     exportPng: () => {
