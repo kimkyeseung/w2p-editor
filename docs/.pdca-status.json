@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-08-24T13:43:22.215Z",
+  "lastUpdated": "2026-08-24T13:50:13.659Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -10,7 +10,8 @@
     "LayerPanel",
     "PropertiesPanel",
     "MockupPreview",
-    "Toast"
+    "Toast",
+    "ProjectList"
   ],
   "primaryFeature": "w2p-editor",
   "features": {
@@ -34,7 +35,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:40:10.127Z",
-        "lastUpdated": "2026-08-24T12:52:10.232Z"
+        "lastUpdated": "2026-08-24T13:49:47.594Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/App.tsx"
     },
@@ -73,7 +74,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:46:20.922Z",
-        "lastUpdated": "2026-08-24T12:52:41.975Z"
+        "lastUpdated": "2026-08-24T13:50:13.659Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Toolbar/Toolbar.tsx"
     },
@@ -128,6 +129,19 @@
         "lastUpdated": "2026-08-24T12:51:28.518Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Toast/Toast.tsx"
+    },
+    "ProjectList": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-08-24T13:48:37.597Z",
+        "lastUpdated": "2026-08-24T13:48:37.597Z"
+      },
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/ProjectList/ProjectList.tsx"
     }
   },
   "pipeline": {
@@ -138,7 +152,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-08-24T13:43:22.215Z"
+    "lastActivity": "2026-08-24T13:50:13.659Z"
   },
   "history": [
     {
@@ -630,6 +644,78 @@
     {
       "timestamp": "2026-08-24T13:43:22.215Z",
       "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:46:00.323Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:47:33.820Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:48:01.037Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:48:15.050Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:48:37.597Z",
+      "feature": "ProjectList",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:49:14.576Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:49:22.969Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:49:31.071Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:49:38.519Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:49:47.594Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:50:02.339Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-24T13:50:13.659Z",
+      "feature": "Toolbar",
       "phase": "do",
       "action": "updated"
     }

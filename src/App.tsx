@@ -4,6 +4,7 @@ import { Canvas, type CanvasHandle } from './components/Canvas/Canvas'
 import { LayerPanel } from './components/LayerPanel/LayerPanel'
 import { PropertiesPanel } from './components/PropertiesPanel/PropertiesPanel'
 import { MockupPreview } from './components/MockupPreview/MockupPreview'
+import { ProjectList } from './components/ProjectList/ProjectList'
 import { Toast } from './components/Toast/Toast'
 import { useEditorStore } from './store/editorStore'
 import './App.css'
@@ -26,6 +27,7 @@ function App() {
   const [mobileTab, setMobileTab] = useState<MobileTab>('layers')
   const [mockupDataUrl, setMockupDataUrl] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [projectListOpen, setProjectListOpen] = useState(false)
 
   const showToast = (message: string) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
@@ -37,6 +39,9 @@ function App() {
   const redo = useEditorStore((s) => s.redo)
   const removeLayer = useEditorStore((s) => s.removeLayer)
   const selectedId = useEditorStore((s) => s.selectedId)
+  const layers = useEditorStore((s) => s.layers)
+  const presetId = useEditorStore((s) => s.presetId)
+  const replaceAll = useEditorStore((s) => s.replaceAll)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -68,7 +73,12 @@ function App() {
 
   return (
     <div className="app">
-      <Toolbar canvasHandleRef={canvasHandleRef} onOpenMockup={handleOpenMockup} onToast={showToast} />
+      <Toolbar
+        canvasHandleRef={canvasHandleRef}
+        onOpenMockup={handleOpenMockup}
+        onOpenProjectList={() => setProjectListOpen(true)}
+        onToast={showToast}
+      />
       <div className="workspace">
         <aside className={`side-panel layer-panel-wrap ${mobileTab === 'layers' ? 'is-active' : ''}`}>
           <LayerPanel />
@@ -101,6 +111,14 @@ function App() {
 
       {mockupDataUrl && (
         <MockupPreview designDataUrl={mockupDataUrl} onClose={() => setMockupDataUrl(null)} />
+      )}
+      {projectListOpen && (
+        <ProjectList
+          currentPresetId={presetId}
+          currentLayers={layers}
+          onLoad={(loadedPresetId, loadedLayers) => replaceAll(loadedLayers, loadedPresetId)}
+          onClose={() => setProjectListOpen(false)}
+        />
       )}
       <Toast message={toastMessage} />
     </div>

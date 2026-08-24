@@ -10,10 +10,11 @@ const MAX_INITIAL_IMAGE_WIDTH = 320
 interface ToolbarProps {
   canvasHandleRef: RefObject<CanvasHandle | null>
   onOpenMockup: () => void
+  onOpenProjectList: () => void
   onToast: (message: string) => void
 }
 
-export function Toolbar({ canvasHandleRef, onOpenMockup, onToast }: ToolbarProps) {
+export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onToast }: ToolbarProps) {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const projectInputRef = useRef<HTMLInputElement>(null)
 
@@ -159,6 +160,9 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onToast }: ToolbarProps
         </button>
         <button type="button" onClick={onOpenMockup}>
           🖼 목업 미리보기
+        </button>
+        <button type="button" onClick={onOpenProjectList}>
+          ☁ 프로젝트 목록 (API)
         </button>
       </div>
     </header>

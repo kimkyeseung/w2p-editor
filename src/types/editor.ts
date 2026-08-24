@@ -50,3 +50,13 @@ export interface PersistedProject {
   layers: EditorLayer[]
   savedAt: string
 }
+
+// A project as stored by the dummy REST API (json-server) — see src/utils/api.ts.
+// json-server assigns string ids (nanoid), not numbers.
+export interface ApiProject {
+  id: string
+  name: string
+  presetId: string
+  layers: EditorLayer[]
+  savedAt: string
+}
