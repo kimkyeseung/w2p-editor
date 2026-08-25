@@ -2,6 +2,7 @@ import { useRef, type RefObject } from 'react'
 import { useEditorStore } from '../../store/editorStore'
 import { CANVAS_PRESETS } from '../../utils/presets'
 import { readImageFile } from '../../utils/canvasSerialization'
+import { SAMPLE_PROJECTS } from '../../utils/sampleProjects'
 import type { CanvasHandle } from '../Canvas/Canvas'
 import './Toolbar.css'
 
@@ -22,6 +23,7 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
   const setPreset = useEditorStore((s) => s.setPreset)
   const addTextLayer = useEditorStore((s) => s.addTextLayer)
   const addImageLayer = useEditorStore((s) => s.addImageLayer)
+  const replaceAll = useEditorStore((s) => s.replaceAll)
   const undo = useEditorStore((s) => s.undo)
   const redo = useEditorStore((s) => s.redo)
   const canUndo = useEditorStore((s) => s.past.length > 0)
@@ -78,6 +80,22 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="toolbar-group">
+        <span className="toolbar-label">샘플</span>
+        {SAMPLE_PROJECTS.map((sample) => (
+          <button
+            key={sample.id}
+            type="button"
+            onClick={() => {
+              replaceAll(sample.layers, sample.presetId)
+              onToast(`${sample.label} 불러왔습니다.`)
+            }}
+          >
+            {sample.label}
+          </button>
+        ))}
       </div>
 
       <div className="toolbar-group">
