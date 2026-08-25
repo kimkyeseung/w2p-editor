@@ -1,4 +1,15 @@
 import { useEditorStore } from '../../store/editorStore'
+import {
+  BringFrontIcon,
+  DuplicateIcon,
+  EyeIcon,
+  EyeOffIcon,
+  ImageIcon,
+  LockIcon,
+  SendBackIcon,
+  TrashIcon,
+  UnlockIcon,
+} from '../common/icons'
 import './LayerPanel.css'
 
 export function LayerPanel() {
@@ -37,10 +48,10 @@ export function LayerPanel() {
         {multiSelected && (
           <span className="panel-title-actions">
             <button type="button" title="선택 복제" onClick={() => duplicateLayers(selectedIds)}>
-              ⧉
+              <DuplicateIcon />
             </button>
             <button type="button" title="선택 삭제" onClick={() => removeLayers(selectedIds)}>
-              🗑
+              <TrashIcon />
             </button>
           </span>
         )}
@@ -49,37 +60,33 @@ export function LayerPanel() {
       <ul className="layer-list">
         {rows.map((layer) => {
           const visible = layer.visible !== false
+          const isSelected = selectedIds.includes(layer.id)
           return (
             <li
               key={layer.id}
-              className={`layer-row ${selectedIds.includes(layer.id) ? 'is-selected' : ''} ${visible ? '' : 'is-hidden'}`}
+              className={`layer-row ${isSelected ? 'is-selected' : ''} ${visible ? '' : 'is-hidden'}`}
               onClick={(e) => handleRowClick(e, layer.id)}
             >
               <span className="layer-type-icon" aria-hidden="true">
-                {layer.type === 'text' ? 'T' : '🖼'}
+                {layer.type === 'text' ? 'T' : <ImageIcon />}
               </span>
-              <span className="layer-name">{layer.name}</span>
+              <span className="layer-name" title={layer.name}>
+                {layer.name}
+              </span>
               <span className="layer-actions" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
+                  className="layer-action-always"
                   title={visible ? '숨기기' : '보이기'}
                   onClick={() => toggleVisible(layer.id)}
                 >
-                  {visible ? '👁' : '‒'}
+                  {visible ? <EyeIcon /> : <EyeOffIcon />}
                 </button>
-                <button
-                  type="button"
-                  title="맨 앞으로"
-                  onClick={() => reorderLayer(layer.id, 'front')}
-                >
-                  ⤒
+                <button type="button" title="맨 앞으로" onClick={() => reorderLayer(layer.id, 'front')}>
+                  <BringFrontIcon />
                 </button>
-                <button
-                  type="button"
-                  title="맨 뒤로"
-                  onClick={() => reorderLayer(layer.id, 'back')}
-                >
-                  ⤓
+                <button type="button" title="맨 뒤로" onClick={() => reorderLayer(layer.id, 'back')}>
+                  <SendBackIcon />
                 </button>
                 <button
                   type="button"
@@ -87,13 +94,13 @@ export function LayerPanel() {
                   className={layer.locked ? 'is-active' : ''}
                   onClick={() => toggleLock(layer.id)}
                 >
-                  {layer.locked ? '🔒' : '🔓'}
+                  {layer.locked ? <LockIcon /> : <UnlockIcon />}
                 </button>
                 <button type="button" title="복제" onClick={() => duplicateLayer(layer.id)}>
-                  ⧉
+                  <DuplicateIcon />
                 </button>
                 <button type="button" title="삭제" onClick={() => removeLayer(layer.id)}>
-                  🗑
+                  <TrashIcon />
                 </button>
               </span>
             </li>
