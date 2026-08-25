@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import * as fabric from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
+import { ROTATE_CURSOR } from '../../utils/cursors'
 import type { EditorLayer, ImageLayer, TextLayer } from '../../types/editor'
 import {
   exportCanvasAsPng,
@@ -97,7 +98,12 @@ const createTextObject = (layer: TextLayer): fabric.Textbox => {
     selectable: !layer.locked && visible,
     evented: !layer.locked && visible,
   })
+  applyRotateCursor(textbox)
   return textbox
+}
+
+const applyRotateCursor = (obj: fabric.FabricObject) => {
+  if (obj.controls.mtr) obj.controls.mtr.cursorStyle = ROTATE_CURSOR
 }
 
 const applyImageLayer = (obj: fabric.FabricImage, layer: ImageLayer) => {
@@ -545,6 +551,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
             const stillExists = useEditorStore.getState().layers.find((l) => l.id === layer.id)
             if (!stillExists || !fabricRef.current) return
             applyImageLayer(img, stillExists as ImageLayer)
+            applyRotateCursor(img)
             idToObject.current.set(layer.id, img)
             objectToId.current.set(img, layer.id)
             fabricRef.current.add(img)
@@ -579,7 +586,9 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
           current.size() === objs.length &&
           objs.every((o) => current.getObjects().includes(o))
         if (!alreadyMatches) {
-          canvas.setActiveObject(new fabric.ActiveSelection(objs, { canvas }))
+          const selection = new fabric.ActiveSelection(objs, { canvas })
+          applyRotateCursor(selection)
+          canvas.setActiveObject(selection)
         }
       }
     }
