@@ -1,10 +1,10 @@
-import type { TextLayer } from '../types/editor'
+import type { EditorLayer, ImageLayer, TextLayer } from '../types/editor'
 
 export interface SampleProject {
   id: string
   label: string
   presetId: string
-  layers: TextLayer[]
+  layers: EditorLayer[]
 }
 
 const textLayer = (
@@ -22,51 +22,79 @@ const textLayer = (
   ...overrides,
 })
 
+const imageLayer = (
+  overrides: Pick<ImageLayer, 'id' | 'src' | 'x' | 'y' | 'width' | 'height'>,
+): ImageLayer => ({
+  type: 'image',
+  name: overrides.id,
+  locked: false,
+  visible: true,
+  rotation: 0,
+  ...overrides,
+})
+
 export const SAMPLE_PROJECTS: SampleProject[] = [
   {
     id: 'sample-business-card',
     label: '샘플: 명함',
     presetId: 'business-card',
     layers: [
+      imageLayer({
+        id: 'sample-card-photo',
+        src: '/samples/headshot.jpg',
+        x: 232,
+        y: 20,
+        width: 92,
+        height: 149,
+      }),
       textLayer({
         id: 'sample-card-brand',
         text: 'STUDIO KIM',
-        x: 190,
-        y: 24,
-        width: 126,
+        x: 24,
+        y: 20,
+        width: 180,
         height: 14,
-        fontSize: 10,
+        fontSize: 9,
         color: '#2563eb',
-        align: 'right',
       }),
       textLayer({
         id: 'sample-card-name',
-        text: '이서연',
+        text: '김도윤',
         x: 24,
-        y: 54,
-        width: 200,
-        height: 32,
-        fontSize: 26,
+        y: 48,
+        width: 190,
+        height: 30,
+        fontSize: 22,
         color: '#111827',
       }),
       textLayer({
         id: 'sample-card-title',
         text: 'Product Designer',
         x: 24,
-        y: 90,
-        width: 220,
-        height: 18,
-        fontSize: 12,
+        y: 80,
+        width: 190,
+        height: 16,
+        fontSize: 11,
         color: '#6b7280',
       }),
       textLayer({
-        id: 'sample-card-contact',
-        text: 'hello@studiokim.com  ·  010-1234-5678',
+        id: 'sample-card-email',
+        text: 'hello@studiokim.com',
         x: 24,
-        y: 150,
-        width: 290,
-        height: 16,
-        fontSize: 10,
+        y: 138,
+        width: 200,
+        height: 14,
+        fontSize: 9,
+        color: '#374151',
+      }),
+      textLayer({
+        id: 'sample-card-phone',
+        text: '010-1234-5678',
+        x: 24,
+        y: 154,
+        width: 200,
+        height: 14,
+        fontSize: 9,
         color: '#374151',
       }),
     ],
@@ -80,7 +108,7 @@ export const SAMPLE_PROJECTS: SampleProject[] = [
         id: 'sample-poster-eyebrow',
         text: '2026 EXHIBITION',
         x: 97,
-        y: 90,
+        y: 80,
         width: 600,
         height: 22,
         fontSize: 16,
@@ -91,11 +119,11 @@ export const SAMPLE_PROJECTS: SampleProject[] = [
         id: 'sample-poster-title',
         text: '빛과 색의 대화',
         x: 47,
-        y: 160,
+        y: 130,
         width: 700,
-        height: 170,
+        height: 100,
         fontFamily: 'Nanum Myeongjo',
-        fontSize: 64,
+        fontSize: 56,
         color: '#111827',
         align: 'center',
       }),
@@ -103,18 +131,26 @@ export const SAMPLE_PROJECTS: SampleProject[] = [
         id: 'sample-poster-subtitle',
         text: '현대미술 특별전',
         x: 97,
-        y: 360,
+        y: 250,
         width: 600,
-        height: 36,
-        fontSize: 26,
+        height: 32,
+        fontSize: 22,
         color: '#4b5563',
         align: 'center',
+      }),
+      imageLayer({
+        id: 'sample-poster-art',
+        src: '/samples/poster-art.jpg',
+        x: 19,
+        y: 320,
+        width: 756,
+        height: 478,
       }),
       textLayer({
         id: 'sample-poster-info',
         text: '2026. 9. 12 – 11. 15   |   서울시립미술관',
         x: 97,
-        y: 1000,
+        y: 850,
         width: 600,
         height: 26,
         fontSize: 18,
@@ -125,7 +161,7 @@ export const SAMPLE_PROJECTS: SampleProject[] = [
         id: 'sample-poster-footer',
         text: '주최 · 서울문화재단',
         x: 97,
-        y: 1040,
+        y: 888,
         width: 600,
         height: 18,
         fontSize: 12,

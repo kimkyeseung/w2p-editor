@@ -47,6 +47,10 @@ Vercel Blob에 연결하려면 최초 1회 `vercel link`로 프로젝트를 연�
   이름 붙여 저장·불러오기·삭제 흐름을 실제 REST 호출로 시연. 프론트엔드와 같은 배포에 포함되어
   **배포 사이트에서도 별도 설정 없이 바로 동작**하며, 데이터는 Vercel Blob에 저장됩니다.
 
+샘플 명함/포스터에 쓰인 사진 2장은 Unsplash에서 가져왔습니다(`public/samples/`) —
+[헤드샷](https://unsplash.com/photos/pAtA8xe_iVM) by LinkedIn Sales Solutions,
+[추상 회화](https://unsplash.com/photos/-MCrF6hnojU) by Jené Stephaniuk (Unsplash License).
+
 ## 기술 스택
 
 React 18 · TypeScript · Vite · Zustand · Fabric.js 7 · 순수 CSS(반응형) · Vercel Functions + Vercel Blob(REST API 데모)
