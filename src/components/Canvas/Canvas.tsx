@@ -3,7 +3,7 @@ import * as fabric from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
 import { ROTATE_CURSOR } from '../../utils/cursors'
-import type { EditorLayer, ImageLayer, TextLayer } from '../../types/editor'
+import type { EditorLayer, ImageLayer, LayerFolder, TextLayer } from '../../types/editor'
 import {
   exportCanvasAsPng,
   importProjectFile,
@@ -47,14 +47,32 @@ const topLeftFromObject = (obj: fabric.FabricObject) => {
 
 // `visible` was added after the first release, so projects saved before it
 // existed don't have the field — treat only an explicit `false` as hidden.
-const isLayerVisible = (layer: Pick<EditorLayer, 'visible'>) => layer.visible !== false
+// A layer's own visible/locked flag is independent of its folder's — a
+// folder being hidden/locked masks its members without touching their own
+// flags, matching Photoshop's group behavior (unhide the folder and each
+// child is back to whatever it was individually set to).
+const folderOf = (layer: Pick<EditorLayer, 'folderId'>, folders: LayerFolder[]) =>
+  layer.folderId ? folders.find((f) => f.id === layer.folderId) : undefined
 
-const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer) => {
-  const visible = isLayerVisible(layer)
+const isLayerVisible = (layer: Pick<EditorLayer, 'visible' | 'folderId'>, folders: LayerFolder[]) => {
+  if (layer.visible === false) return false
+  const folder = folderOf(layer, folders)
+  return !folder || folder.visible !== false
+}
+
+const isLayerLocked = (layer: Pick<EditorLayer, 'locked' | 'folderId'>, folders: LayerFolder[]) => {
+  if (layer.locked) return true
+  const folder = folderOf(layer, folders)
+  return !!folder?.locked
+}
+
+const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer, folders: LayerFolder[]) => {
+  const visible = isLayerVisible(layer, folders)
+  const locked = isLayerLocked(layer, folders)
   obj.set({
     visible,
-    selectable: !layer.locked && visible,
-    evented: !layer.locked && visible,
+    selectable: !locked && visible,
+    evented: !locked && visible,
   })
   // While the object is part of a live multi-selection (ActiveSelection),
   // Fabric reinterprets left/top as relative to the group, not absolute
@@ -69,7 +87,7 @@ const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer) => {
   obj.set({ originX: 'center', originY: 'center', left: centerX, top: centerY, angle: layer.rotation })
 }
 
-const applyTextLayer = (obj: fabric.Textbox, layer: TextLayer) => {
+const applyTextLayer = (obj: fabric.Textbox, layer: TextLayer, folders: LayerFolder[]) => {
   obj.set({
     text: layer.text,
     fontFamily: layer.fontFamily,
@@ -82,12 +100,13 @@ const applyTextLayer = (obj: fabric.Textbox, layer: TextLayer) => {
   obj.initDimensions()
   const measuredHeight = obj.height || 1
   obj.set('scaleY', layer.height / measuredHeight)
-  applyCommonTransform(obj, layer)
+  applyCommonTransform(obj, layer, folders)
 }
 
-const createTextObject = (layer: TextLayer): fabric.Textbox => {
+const createTextObject = (layer: TextLayer, folders: LayerFolder[]): fabric.Textbox => {
   const { centerX, centerY } = centerFromTopLeft(layer)
-  const visible = isLayerVisible(layer)
+  const visible = isLayerVisible(layer, folders)
+  const locked = isLayerLocked(layer, folders)
   const textbox = new fabric.Textbox(layer.text, {
     originX: 'center',
     originY: 'center',
@@ -100,8 +119,8 @@ const createTextObject = (layer: TextLayer): fabric.Textbox => {
     textAlign: layer.align,
     angle: layer.rotation,
     visible,
-    selectable: !layer.locked && visible,
-    evented: !layer.locked && visible,
+    selectable: !locked && visible,
+    evented: !locked && visible,
   })
   applyRotateCursor(textbox)
   return textbox
@@ -111,11 +130,11 @@ const applyRotateCursor = (obj: fabric.FabricObject) => {
   if (obj.controls.mtr) obj.controls.mtr.cursorStyle = ROTATE_CURSOR
 }
 
-const applyImageLayer = (obj: fabric.FabricImage, layer: ImageLayer) => {
+const applyImageLayer = (obj: fabric.FabricImage, layer: ImageLayer, folders: LayerFolder[]) => {
   const baseWidth = obj.width || 1
   const baseHeight = obj.height || 1
   obj.set({ scaleX: layer.width / baseWidth, scaleY: layer.height / baseHeight })
-  applyCommonTransform(obj, layer)
+  applyCommonTransform(obj, layer, folders)
 }
 
 // The zoom/pan view state below is a pure presentation concern (how much of
@@ -174,6 +193,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   }, [zoom])
 
   const layers = useEditorStore((s) => s.layers)
+  const folders = useEditorStore((s) => s.folders)
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const presetId = useEditorStore((s) => s.presetId)
   const selectLayers = useEditorStore((s) => s.selectLayers)
@@ -483,8 +503,15 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     }
     const clearAlignGuides = () => setAlignGuides({ vertical: [], horizontal: [] })
 
-    const handleSelectionChange = (e: { selected?: fabric.FabricObject[] }) => {
-      const ids = (e.selected ?? [])
+    // Fabric's selection:created/updated events carry `selected`/`deselected`
+    // as the *delta* for that specific transition, not the full current
+    // selection (e.g. going from 1 to 2 active objects fires with
+    // `selected` containing only the newly-added one). Using that directly
+    // silently truncated multi-select down to whatever just changed —
+    // canvas.getActiveObjects() is the actual full current selection.
+    const handleSelectionChange = () => {
+      const ids = canvas
+        .getActiveObjects()
         .map((obj) => objectToId.current.get(obj))
         .filter((id): id is string => id !== undefined)
       selectLayers(ids)
@@ -599,16 +626,16 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       const existing = idToObject.current.get(layer.id)
       if (existing) {
         if (layer.type === 'text' && existing instanceof fabric.Textbox) {
-          applyTextLayer(existing, layer)
+          applyTextLayer(existing, layer, folders)
         } else if (layer.type === 'image') {
-          applyImageLayer(existing as fabric.FabricImage, layer)
+          applyImageLayer(existing as fabric.FabricImage, layer, folders)
         }
         canvas.moveObjectTo(existing, index)
         return
       }
 
       if (layer.type === 'text') {
-        const obj = createTextObject(layer)
+        const obj = createTextObject(layer, folders)
         idToObject.current.set(layer.id, obj)
         objectToId.current.set(obj, layer.id)
         canvas.add(obj)
@@ -620,7 +647,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
             pendingImageIds.current.delete(layer.id)
             const stillExists = useEditorStore.getState().layers.find((l) => l.id === layer.id)
             if (!stillExists || !fabricRef.current) return
-            applyImageLayer(img, stillExists as ImageLayer)
+            applyImageLayer(img, stillExists as ImageLayer, useEditorStore.getState().folders)
             applyRotateCursor(img)
             idToObject.current.set(layer.id, img)
             objectToId.current.set(img, layer.id)
@@ -664,7 +691,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     }
 
     canvas.requestRenderAll()
-  }, [layers, selectedIds])
+  }, [layers, folders, selectedIds])
 
   useImperativeHandle(ref, () => ({
     exportPng: () => {
@@ -673,21 +700,21 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     },
     saveToLocalStorage: () => {
       const canvas = fabricRef.current
-      if (canvas) saveToLocalStorage(canvas, layers, presetId)
+      if (canvas) saveToLocalStorage(canvas, layers, presetId, folders)
     },
     loadFromLocalStorage: () => {
       const project = loadFromLocalStorage()
       if (!project) return false
-      replaceAll(project.layers, project.presetId)
+      replaceAll(project.layers, project.presetId, project.folders ?? [])
       return true
     },
     exportProjectFile: () => {
       const canvas = fabricRef.current
-      if (canvas) exportProjectFile(canvas, layers, presetId)
+      if (canvas) exportProjectFile(canvas, layers, presetId, folders)
     },
     importProjectFile: async (file: File) => {
       const project = await importProjectFile(file)
-      replaceAll(project.layers, project.presetId)
+      replaceAll(project.layers, project.presetId, project.folders ?? [])
     },
     getDesignDataUrl: () => {
       const canvas = fabricRef.current

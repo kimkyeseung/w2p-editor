@@ -1,5 +1,5 @@
 import * as fabric from 'fabric'
-import type { EditorLayer, PersistedProject } from '../types/editor'
+import type { EditorLayer, LayerFolder, PersistedProject } from '../types/editor'
 
 const STORAGE_KEY = 'w2p-editor:project'
 
@@ -7,11 +7,13 @@ export const buildProject = (
   canvas: fabric.Canvas,
   layers: EditorLayer[],
   presetId: string,
+  folders: LayerFolder[],
 ): PersistedProject => ({
   version: 1,
   presetId,
   fabricJson: canvas.toJSON(),
   layers,
+  folders,
   savedAt: new Date().toISOString(),
 })
 
@@ -19,8 +21,9 @@ export const saveToLocalStorage = (
   canvas: fabric.Canvas,
   layers: EditorLayer[],
   presetId: string,
+  folders: LayerFolder[],
 ): void => {
-  const project = buildProject(canvas, layers, presetId)
+  const project = buildProject(canvas, layers, presetId, folders)
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project))
 }
 
@@ -49,8 +52,9 @@ export const exportProjectFile = (
   canvas: fabric.Canvas,
   layers: EditorLayer[],
   presetId: string,
+  folders: LayerFolder[],
 ): void => {
-  const project = buildProject(canvas, layers, presetId)
+  const project = buildProject(canvas, layers, presetId, folders)
   const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' })
   downloadBlob(blob, `w2p-project-${Date.now()}.json`)
 }

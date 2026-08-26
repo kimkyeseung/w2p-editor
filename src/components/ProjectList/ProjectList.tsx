@@ -1,19 +1,20 @@
 import { useEffect, useState } from 'react'
 import { createProject, deleteProject, fetchProjects } from '../../utils/api'
 import { Modal } from '../common/Modal'
-import type { ApiProject, EditorLayer } from '../../types/editor'
+import type { ApiProject, EditorLayer, LayerFolder } from '../../types/editor'
 import './ProjectList.css'
 
 interface ProjectListProps {
   currentPresetId: string
   currentLayers: EditorLayer[]
-  onLoad: (presetId: string, layers: EditorLayer[]) => void
+  currentFolders: LayerFolder[]
+  onLoad: (presetId: string, layers: EditorLayer[], folders: LayerFolder[]) => void
   onClose: () => void
 }
 
 type Status = 'loading' | 'ready' | 'error'
 
-export function ProjectList({ currentPresetId, currentLayers, onLoad, onClose }: ProjectListProps) {
+export function ProjectList({ currentPresetId, currentLayers, currentFolders, onLoad, onClose }: ProjectListProps) {
   const [projects, setProjects] = useState<ApiProject[]>([])
   const [status, setStatus] = useState<Status>('loading')
   const [saveName, setSaveName] = useState('')
@@ -41,7 +42,7 @@ export function ProjectList({ currentPresetId, currentLayers, onLoad, onClose }:
       // Append the server's response directly instead of re-fetching the list —
       // the blob store the API sits on is only eventually consistent across
       // writes, so a GET immediately after this POST can still race and miss it.
-      const created = await createProject(name, currentPresetId, currentLayers)
+      const created = await createProject(name, currentPresetId, currentLayers, currentFolders)
       setProjects((prev) => [...prev, created])
       setSaveName('')
     } catch {
@@ -97,7 +98,7 @@ export function ProjectList({ currentPresetId, currentLayers, onLoad, onClose }:
                   type="button"
                   className="project-list-load"
                   onClick={() => {
-                    onLoad(p.presetId, p.layers)
+                    onLoad(p.presetId, p.layers, p.folders ?? [])
                     onClose()
                   }}
                 >

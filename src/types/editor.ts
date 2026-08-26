@@ -11,6 +11,18 @@ export interface LayerBase {
   width: number
   height: number
   rotation: number
+  // Layers sharing a folderId are kept contiguous in the layers array (that
+  // contiguous run *is* the folder's position in z-order) — a folder has no
+  // z-order slot of its own, it's purely a layer-panel grouping concept.
+  folderId?: string
+}
+
+export interface LayerFolder {
+  id: string
+  name: string
+  locked: boolean
+  visible: boolean
+  collapsed: boolean
 }
 
 export interface TextLayer extends LayerBase {
@@ -48,15 +60,16 @@ export interface PersistedProject {
   presetId: string
   fabricJson: unknown
   layers: EditorLayer[]
+  folders: LayerFolder[]
   savedAt: string
 }
 
-// A project as stored by the dummy REST API (json-server) — see src/utils/api.ts.
-// json-server assigns string ids (nanoid), not numbers.
+// A project as stored by the REST API demo — see src/utils/api.ts and api/projects/.
 export interface ApiProject {
   id: string
   name: string
   presetId: string
   layers: EditorLayer[]
+  folders: LayerFolder[]
   savedAt: string
 }

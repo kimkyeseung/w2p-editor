@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { readProjects, writeProjects } from '../_lib/projectsStore.js'
-import type { EditorLayer } from '../../src/types/editor.js'
+import type { EditorLayer, LayerFolder } from '../../src/types/editor.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
@@ -10,7 +10,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === 'POST') {
-    const body = req.body as { name?: string; presetId?: string; layers?: EditorLayer[] }
+    const body = req.body as {
+      name?: string
+      presetId?: string
+      layers?: EditorLayer[]
+      folders?: LayerFolder[]
+    }
     if (!body?.name || !body?.presetId || !body?.layers) {
       res.status(400).json({ error: 'name, presetId, layers are required' })
       return
@@ -22,6 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       name: body.name,
       presetId: body.presetId,
       layers: body.layers,
+      folders: body.folders ?? [],
       savedAt: new Date().toISOString(),
     }
     await writeProjects([...projects, project])

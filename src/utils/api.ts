@@ -1,4 +1,4 @@
-import type { ApiProject, EditorLayer } from '../types/editor'
+import type { ApiProject, EditorLayer, LayerFolder } from '../types/editor'
 
 // REST API backed by Vercel Functions + Blob storage (see api/projects/), deployed
 // alongside the frontend — no separate backend or hosting to manage.
@@ -14,11 +14,12 @@ export const createProject = async (
   name: string,
   presetId: string,
   layers: EditorLayer[],
+  folders: LayerFolder[],
 ): Promise<ApiProject> => {
   const res = await fetch(`${API_BASE_URL}/projects`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, presetId, layers }),
+    body: JSON.stringify({ name, presetId, layers, folders }),
   })
   if (!res.ok) throw new Error(`POST /projects failed: ${res.status}`)
   return res.json()

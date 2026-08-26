@@ -40,6 +40,7 @@ function App() {
   const removeLayers = useEditorStore((s) => s.removeLayers)
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const layers = useEditorStore((s) => s.layers)
+  const folders = useEditorStore((s) => s.folders)
   const presetId = useEditorStore((s) => s.presetId)
   const replaceAll = useEditorStore((s) => s.replaceAll)
 
@@ -120,7 +121,10 @@ function App() {
         <ProjectList
           currentPresetId={presetId}
           currentLayers={layers}
-          onLoad={(loadedPresetId, loadedLayers) => replaceAll(loadedLayers, loadedPresetId)}
+          currentFolders={folders}
+          onLoad={(loadedPresetId, loadedLayers, loadedFolders) =>
+            replaceAll(loadedLayers, loadedPresetId, loadedFolders)
+          }
           onClose={() => setProjectListOpen(false)}
         />
       )}
