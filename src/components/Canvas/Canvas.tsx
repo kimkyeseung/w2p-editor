@@ -50,18 +50,23 @@ const topLeftFromObject = (obj: fabric.FabricObject) => {
 const isLayerVisible = (layer: Pick<EditorLayer, 'visible'>) => layer.visible !== false
 
 const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer) => {
-  const { centerX, centerY } = centerFromTopLeft(layer)
   const visible = isLayerVisible(layer)
   obj.set({
-    originX: 'center',
-    originY: 'center',
-    left: centerX,
-    top: centerY,
-    angle: layer.rotation,
     visible,
     selectable: !layer.locked && visible,
     evented: !layer.locked && visible,
   })
+  // While the object is part of a live multi-selection (ActiveSelection),
+  // Fabric reinterprets left/top as relative to the group, not absolute
+  // canvas coordinates — writing our absolute x/y here corrupts its
+  // transform and renders it far outside the visible selection box (looks
+  // like the text vanished). The object already reflects any in-progress
+  // group drag, and Fabric bakes its position back to absolute coordinates
+  // the instant it leaves the group (deselect), so it's safe to skip this
+  // and let a later reconciliation pick it back up once ungrouped.
+  if (obj.group) return
+  const { centerX, centerY } = centerFromTopLeft(layer)
+  obj.set({ originX: 'center', originY: 'center', left: centerX, top: centerY, angle: layer.rotation })
 }
 
 const applyTextLayer = (obj: fabric.Textbox, layer: TextLayer) => {
