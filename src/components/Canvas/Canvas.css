@@ -83,6 +83,14 @@
   cursor: grabbing;
 }
 
+.marquee-select-box {
+  position: fixed;
+  pointer-events: none;
+  z-index: 6;
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid #2563eb;
+}
+
 .canvas-view-controls {
   position: absolute;
   right: 1rem;

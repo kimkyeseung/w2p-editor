@@ -154,12 +154,14 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const pendingImageIds = useRef(new Set<string>())
   const pinchStateRef = useRef<{ distance: number; zoom: number } | null>(null)
   const panDragRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number } | null>(null)
+  const marqueeStartRef = useRef<{ x: number; y: number } | null>(null)
   const zoomRef = useRef(1)
 
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [panMode, setPanMode] = useState(false)
   const [spaceHeld, setSpaceHeld] = useState(false)
+  const [marqueeBox, setMarqueeBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const [showGuides, setShowGuides] = useState(true)
   const [alignGuides, setAlignGuides] = useState<{ vertical: number[]; horizontal: number[] }>({
     vertical: [],
@@ -301,6 +303,69 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   }
   const handlePanPointerUp = () => {
     panDragRef.current = null
+  }
+
+  // Fabric's own canvas element is sized exactly to the artboard, so a drag
+  // starting in the gray margin around it never reaches Fabric at all — there's
+  // nothing listening there. This reimplements marquee-select for that area:
+  // capture the pointer on canvas-scroll's own background (guarded so it never
+  // fires for a bubbled click on the artboard/an object, which Fabric already
+  // handles) so the drag keeps working even if it crosses onto the artboard,
+  // then select whatever objects' bounding boxes the drag rectangle overlaps.
+  const handleBackgroundPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget || e.button !== 0) return
+    marqueeStartRef.current = { x: e.clientX, y: e.clientY }
+    setMarqueeBox({ x: e.clientX, y: e.clientY, w: 0, h: 0 })
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // Capture can legitimately fail to acquire (e.g. the pointer was
+      // already released); the drag still works via document-level move/up
+      // bubbling in that case, just without the "follow across other
+      // elements" guarantee capture normally provides.
+    }
+  }
+  const handleBackgroundPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const start = marqueeStartRef.current
+    if (!start) return
+    setMarqueeBox({
+      x: Math.min(start.x, e.clientX),
+      y: Math.min(start.y, e.clientY),
+      w: Math.abs(e.clientX - start.x),
+      h: Math.abs(e.clientY - start.y),
+    })
+  }
+  const handleBackgroundPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const start = marqueeStartRef.current
+    marqueeStartRef.current = null
+    setMarqueeBox(null)
+    if (!start) return
+
+    const canvas = fabricRef.current
+    if (!canvas) return
+    const canvasRect = canvas.upperCanvasEl.getBoundingClientRect()
+    if (canvasRect.width === 0 || canvasRect.height === 0) return
+    const scaleX = canvasRect.width / canvas.getWidth()
+    const scaleY = canvasRect.height / canvas.getHeight()
+
+    const dragLeft = Math.min(start.x, e.clientX)
+    const dragTop = Math.min(start.y, e.clientY)
+    const dragRight = Math.max(start.x, e.clientX)
+    const dragBottom = Math.max(start.y, e.clientY)
+
+    const ids: string[] = []
+    for (const [id, obj] of idToObject.current.entries()) {
+      if (obj.visible === false) continue
+      const b = obj.getBoundingRect()
+      const objLeft = canvasRect.left + b.left * scaleX
+      const objTop = canvasRect.top + b.top * scaleY
+      const objRight = objLeft + b.width * scaleX
+      const objBottom = objTop + b.height * scaleY
+      if (objLeft < dragRight && objRight > dragLeft && objTop < dragBottom && objBottom > dragTop) {
+        ids.push(id)
+      }
+    }
+    selectLayers(ids)
   }
 
   // Initialize the Fabric canvas once and wire canvas -> store event sync.
@@ -640,7 +705,14 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
           The view controls below live outside this div (as a sibling) so
           they stay pinned to the viewport corner instead of panning away
           with the content. */}
-      <div className="canvas-scroll" ref={canvasScrollRef}>
+      <div
+        className="canvas-scroll"
+        ref={canvasScrollRef}
+        onPointerDown={isPanning ? undefined : handleBackgroundPointerDown}
+        onPointerMove={isPanning ? undefined : handleBackgroundPointerMove}
+        onPointerUp={isPanning ? undefined : handleBackgroundPointerUp}
+        onPointerCancel={isPanning ? undefined : handleBackgroundPointerUp}
+      >
         <div
           ref={zoomFrameRef}
           className="canvas-zoom-frame"
@@ -709,6 +781,13 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
           onPointerMove={handlePanPointerMove}
           onPointerUp={handlePanPointerUp}
           onPointerCancel={handlePanPointerUp}
+        />
+      )}
+
+      {marqueeBox && (
+        <div
+          className="marquee-select-box"
+          style={{ left: marqueeBox.x, top: marqueeBox.y, width: marqueeBox.w, height: marqueeBox.h }}
         />
       )}
 
