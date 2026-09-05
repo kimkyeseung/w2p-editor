@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-09-05T11:18:49.274Z",
+  "lastUpdated": "2026-09-05T11:43:54.309Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -38,9 +38,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:40:10.127Z",
-        "lastUpdated": "2026-09-05T11:17:58.996Z"
+        "lastUpdated": "2026-09-05T11:40:37.281Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/common/ColorField.tsx"
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/vite.config.ts"
     },
     "store": {
       "phase": "do",
@@ -51,9 +51,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:41:19.891Z",
-        "lastUpdated": "2026-09-05T11:17:43.574Z"
+        "lastUpdated": "2026-09-05T11:41:45.036Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/store/editorStore.ts"
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/store/editorStore.test.ts"
     },
     "Canvas": {
       "phase": "do",
@@ -64,9 +64,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:45:57.583Z",
-        "lastUpdated": "2026-09-05T11:12:53.007Z"
+        "lastUpdated": "2026-09-05T11:43:54.309Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Canvas/Canvas.tsx"
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Canvas/canvasHelpers.test.ts"
     },
     "Toolbar": {
       "phase": "do",
@@ -194,7 +194,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-05T11:18:49.274Z"
+    "lastActivity": "2026-09-05T11:43:54.309Z"
   },
   "history": [
     {
@@ -1982,6 +1982,54 @@
     {
       "timestamp": "2026-09-05T11:18:49.274Z",
       "feature": "PropertiesPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:40:37.281Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:41:45.036Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:42:00.491Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:43:08.472Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:43:19.963Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:43:34.252Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:43:49.092Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:43:54.309Z",
+      "feature": "Canvas",
       "phase": "do",
       "action": "updated"
     }

@@ -3,15 +3,7 @@ import * as fabric from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
 import { ROTATE_CURSOR } from '../../utils/cursors'
-import type {
-  EditorLayer,
-  ImageLayer,
-  LayerBorder,
-  LayerFolder,
-  LayerShadow,
-  ShapeLayer,
-  TextLayer,
-} from '../../types/editor'
+import type { EditorLayer, ImageLayer, LayerFolder, ShapeLayer, TextLayer } from '../../types/editor'
 import {
   exportCanvasAsPng,
   importProjectFile,
@@ -19,6 +11,7 @@ import {
   saveToLocalStorage,
   exportProjectFile,
 } from '../../utils/canvasSerialization'
+import { buildBorderProps, buildShadow, centerFromTopLeft, isLayerLocked, isLayerVisible } from './canvasHelpers'
 import './Canvas.css'
 
 export interface CanvasHandle {
@@ -30,36 +23,6 @@ export interface CanvasHandle {
   getDesignDataUrl: () => string | null
 }
 
-// Fabric.js v6+ positions objects by their CENTER (originX/originY default to
-// 'center'), not their top-left corner. Our EditorLayer model — and the
-// properties panel — works in "top-left" coordinates (the usual mental model
-// for print/design tools), so every read/write to a Fabric object converts
-// between the two. Rotation always pivots around the object's own center,
-// which matches standard design-tool UX (Figma/Canva do the same).
-const centerFromTopLeft = (layer: Pick<EditorLayer, 'x' | 'y' | 'width' | 'height'>) => ({
-  centerX: layer.x + layer.width / 2,
-  centerY: layer.y + layer.height / 2,
-})
-
-const buildShadow = (shadow: LayerShadow): fabric.Shadow | null =>
-  shadow.enabled
-    ? new fabric.Shadow({
-        color: shadow.color,
-        blur: shadow.blur,
-        offsetX: shadow.offsetX,
-        offsetY: shadow.offsetY,
-      })
-    : null
-
-// Only meaningful for text/image layers — shape layers already own
-// stroke/strokeWidth via ShapeLayer.stroke and apply it themselves in
-// applyShapeStyle/createShapeObject, so applying this too would fight over
-// Fabric's single stroke/strokeWidth properties on the same object.
-const buildBorderProps = (border: LayerBorder) => ({
-  stroke: border.enabled ? border.color : '',
-  strokeWidth: border.enabled ? border.width : 0,
-})
-
 const topLeftFromObject = (obj: fabric.FabricObject) => {
   const center = obj.getCenterPoint()
   const width = obj.getScaledWidth()
@@ -70,27 +33,6 @@ const topLeftFromObject = (obj: fabric.FabricObject) => {
     width,
     height,
   }
-}
-
-// `visible` was added after the first release, so projects saved before it
-// existed don't have the field — treat only an explicit `false` as hidden.
-// A layer's own visible/locked flag is independent of its folder's — a
-// folder being hidden/locked masks its members without touching their own
-// flags, matching Photoshop's group behavior (unhide the folder and each
-// child is back to whatever it was individually set to).
-const folderOf = (layer: Pick<EditorLayer, 'folderId'>, folders: LayerFolder[]) =>
-  layer.folderId ? folders.find((f) => f.id === layer.folderId) : undefined
-
-const isLayerVisible = (layer: Pick<EditorLayer, 'visible' | 'folderId'>, folders: LayerFolder[]) => {
-  if (layer.visible === false) return false
-  const folder = folderOf(layer, folders)
-  return !folder || folder.visible !== false
-}
-
-const isLayerLocked = (layer: Pick<EditorLayer, 'locked' | 'folderId'>, folders: LayerFolder[]) => {
-  if (layer.locked) return true
-  const folder = folderOf(layer, folders)
-  return !!folder?.locked
 }
 
 const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer, folders: LayerFolder[]) => {
