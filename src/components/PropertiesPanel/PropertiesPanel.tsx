@@ -21,6 +21,7 @@ export function PropertiesPanel() {
   const updateLayerTransform = useEditorStore((s) => s.updateLayerTransform)
   const updateLayerShadow = useEditorStore((s) => s.updateLayerShadow)
   const updateLayerBorder = useEditorStore((s) => s.updateLayerBorder)
+  const flipLayer = useEditorStore((s) => s.flipLayer)
   const updateTextStyle = useEditorStore((s) => s.updateTextStyle)
   const updateShapeStyle = useEditorStore((s) => s.updateShapeStyle)
   const renameLayer = useEditorStore((s) => s.renameLayer)
@@ -113,6 +114,26 @@ export function PropertiesPanel() {
           </button>
           <button type="button" onClick={() => alignLayer(layer.id, 'bottom')}>
             하단
+          </button>
+        </div>
+      </div>
+
+      <div className="prop-section">
+        <span className="prop-section-title">반전</span>
+        <div className="prop-align-grid prop-align-text prop-cols-2">
+          <button
+            type="button"
+            className={layer.flipX ? 'is-active' : ''}
+            onClick={() => flipLayer(layer.id, 'horizontal')}
+          >
+            가로 반전
+          </button>
+          <button
+            type="button"
+            className={layer.flipY ? 'is-active' : ''}
+            onClick={() => flipLayer(layer.id, 'vertical')}
+          >
+            세로 반전
           </button>
         </div>
       </div>

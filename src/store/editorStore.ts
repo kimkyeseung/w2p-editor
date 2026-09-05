@@ -48,6 +48,7 @@ interface EditorState {
   ) => void
   updateLayerShadow: (id: string, shadow: Partial<LayerShadow>) => void
   updateLayerBorder: (id: string, border: Partial<LayerBorder>) => void
+  flipLayer: (id: string, axis: 'horizontal' | 'vertical') => void
   updateTextStyle: (id: string, style: Partial<Omit<TextLayer, keyof EditorLayer | 'type'>>) => void
   updateShapeStyle: (id: string, style: Partial<Omit<ShapeLayer, keyof EditorLayer | 'type' | 'shape'>>) => void
   // Fabric fires one `object:modified` event for both a transform drag AND
@@ -134,6 +135,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       opacity: 1,
       shadow: { enabled: false, color: '#000000', blur: 10, offsetX: 5, offsetY: 5 },
       border: { enabled: false, color: '#000000', width: 2 },
+      flipX: false,
+      flipY: false,
       text: '텍스트를 입력하세요',
       fontFamily: 'Noto Sans KR',
       fontSize: 24,
@@ -168,6 +171,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       opacity: 1,
       shadow: { enabled: false, color: '#000000', blur: 10, offsetX: 5, offsetY: 5 },
       border: { enabled: false, color: '#000000', width: 2 },
+      flipX: false,
+      flipY: false,
       src,
     }
     set((state) => ({
@@ -208,6 +213,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       opacity: 1,
       shadow: { enabled: false, color: '#000000', blur: 10, offsetX: 5, offsetY: 5 },
       border: { enabled: false, color: '#000000', width: 2 },
+      flipX: false,
+      flipY: false,
       fill: '#e5e7eb',
       stroke: '#111827',
       strokeWidth: 2,
@@ -243,6 +250,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushHistory(state),
       layers: state.layers.map((layer) =>
         layer.id === id ? { ...layer, border: { ...layer.border, ...border } } : layer,
+      ),
+    }))
+  },
+
+  flipLayer: (id, axis) => {
+    set((state) => ({
+      ...pushHistory(state),
+      layers: state.layers.map((layer) =>
+        layer.id === id
+          ? axis === 'horizontal'
+            ? { ...layer, flipX: !layer.flipX }
+            : { ...layer, flipY: !layer.flipY }
+          : layer,
       ),
     }))
   },

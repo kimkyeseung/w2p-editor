@@ -35,6 +35,8 @@ export interface LayerBase {
   opacity: number
   shadow: LayerShadow
   border: LayerBorder
+  flipX: boolean
+  flipY: boolean
   // Layers sharing a folderId are kept contiguous in the layers array (that
   // contiguous run *is* the folder's position in z-order) — a folder has no
   // z-order slot of its own, it's purely a layer-panel grouping concept.
