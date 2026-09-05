@@ -90,7 +90,7 @@ interface EditorState {
 
   setPreset: (presetId: string) => void
   addTextLayer: () => void
-  addImageLayer: (src: string, width: number, height: number) => void
+  addImageLayer: (src: string, width: number, height: number, position?: { x: number; y: number }) => void
   addShapeLayer: (shape: ShapeKind) => void
   setDrawMode: (mode: DrawMode) => void
   setDrawColor: (color: string) => void
@@ -259,7 +259,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }))
   },
 
-  addImageLayer: (src, width, height) => {
+  addImageLayer: (src, width, height, position) => {
     const id = createId()
     const newLayer: ImageLayer = {
       id,
@@ -267,8 +267,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       name: `이미지 ${get().layers.filter((l) => l.type === 'image').length + 1}`,
       locked: false,
       visible: true,
-      x: 40,
-      y: 40,
+      x: position?.x ?? 40,
+      y: position?.y ?? 40,
       width,
       height,
       rotation: 0,

@@ -12,21 +12,39 @@ export const centerFromTopLeft = (layer: Pick<EditorLayer, 'x' | 'y' | 'width' |
   centerY: layer.y + layer.height / 2,
 })
 
-// Fabric folds a non-uniform-stroke object's `strokeWidth` into its
-// *rendered* dimensions — `getScaledWidth()` returns `(width + strokeWidth)
-// * scaleX`, not `width * scaleX` — but the object's own `width`/`height`
-// never include it. A path layer is sized purely via scale (see
-// createPathObject/applyPathStyle in Canvas.tsx), so the scale factor has to
-// be computed against this same stroke-inclusive base; computing it against
-// the bare `objWidth`/`objHeight` instead makes every read-back of the
-// object's on-canvas size (after a resize, e.g.) land slightly larger than
-// what was actually stored, which the next store->canvas sync then bakes in
-// as an even-larger scale — a small, unbounded compounding drift on every
-// round trip through a resize or `object:modified`.
-export const pathScaleBase = (objWidth: number, objHeight: number, strokeWidth: number) => ({
-  baseWidth: (objWidth || 1) + strokeWidth,
-  baseHeight: (objHeight || 1) + strokeWidth,
-})
+// A path layer is sized purely via scale (see createPathObject/
+// applyPathStyle in Canvas.tsx) rather than by touching its path data, and
+// is rendered with `strokeUniform: true` so resizing stretches the drawn
+// line, not the pen width. With strokeUniform, Fabric's own dimension
+// formula is additive rather than multiplicative — `getScaledWidth()`
+// returns `rawWidth * scaleX + strokeWidth`, not `(rawWidth + strokeWidth)
+// * scaleX` — so the scale needed to reach a given on-canvas `targetSize`
+// is `(targetSize - strokeWidth) / rawSize`. Solving it this way (rather
+// than against the bare raw size) keeps every read-back of the object's
+// size after a resize landing exactly back on what was stored, with zero
+// drift on repeated round trips.
+//
+// `rawSize` is legitimately 0 for a perfectly horizontal or vertical
+// freehand stroke (the path's own bounding box has no extent on that axis).
+// Without strokeUniform this made a resize balloon the *stroke itself* by
+// whatever huge factor was needed to fake a nonzero height out of a
+// zero-height shape — turning a thin line into a solid black block, since
+// canvas stroke rendering scales anisotropically with a non-uniform
+// transform. With strokeUniform, `0 * scale` is still unconditionally 0, so
+// there is no scale value that changes the rendered size on that axis at
+// all — matching the real constraint (a flat line can't gain height by
+// scaling alone, only its position/width can move) rather than distorting
+// the stroke to fake it. The scale value returned in that case is
+// unobservable (any value renders identically), so 1 is as good as any.
+// Floor rather than 0/negative: a target smaller than the stroke itself
+// (shrinking a thick brush stroke down small) would otherwise solve to a
+// negative scale, which Fabric renders as a mirror-flip — a second, subtler
+// version of the same "resize does something visually nonsensical" bug this
+// function exists to prevent.
+const MIN_PATH_SCALE = 0.01
+
+export const pathScale = (rawSize: number, strokeWidth: number, targetSize: number) =>
+  rawSize > 0 ? Math.max((targetSize - strokeWidth) / rawSize, MIN_PATH_SCALE) : 1
 
 export const buildShadow = (shadow: LayerShadow): fabric.Shadow | null =>
   shadow.enabled

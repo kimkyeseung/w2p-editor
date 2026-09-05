@@ -27,7 +27,7 @@ import {
   centerFromTopLeft,
   isLayerLocked,
   isLayerVisible,
-  pathScaleBase,
+  pathScale,
   unionBoundingBox,
 } from './canvasHelpers'
 import './Canvas.css'
@@ -204,16 +204,16 @@ const createShapeObject = (layer: ShapeLayer, folders: LayerFolder[]): fabric.Ob
 // A path's own `width`/`height` come from its command data's bounding box
 // and never change after the stroke is drawn — so, like an image's natural
 // pixel size, matching the stored layer.width/height is purely a matter of
-// scale, not of touching the path data itself (see pathScaleBase for why the
-// scale base has to include strokeWidth).
+// scale, not of touching the path data itself (see pathScale for the formula
+// and why strokeUniform matters here).
 const applyPathStyle = (obj: fabric.Path, layer: PathLayer, folders: LayerFolder[]) => {
-  const { baseWidth, baseHeight } = pathScaleBase(obj.width, obj.height, layer.strokeWidth)
   obj.set({
-    scaleX: layer.width / baseWidth,
-    scaleY: layer.height / baseHeight,
+    scaleX: pathScale(obj.width, layer.strokeWidth, layer.width),
+    scaleY: pathScale(obj.height, layer.strokeWidth, layer.height),
     fill: layer.fill || '',
     stroke: layer.stroke,
     strokeWidth: layer.strokeWidth,
+    strokeUniform: true,
   })
   applyCommonTransform(obj, layer, folders)
 }
@@ -231,6 +231,7 @@ const createPathObject = (layer: PathLayer, folders: LayerFolder[]): fabric.Path
     fill: layer.fill || '',
     stroke: layer.stroke,
     strokeWidth: layer.strokeWidth,
+    strokeUniform: true,
     opacity: layer.opacity,
     shadow: buildShadow(layer.shadow),
     flipX: layer.flipX,
@@ -240,8 +241,10 @@ const createPathObject = (layer: PathLayer, folders: LayerFolder[]): fabric.Path
     selectable: !locked && visible,
     evented: !locked && visible,
   })
-  const { baseWidth, baseHeight } = pathScaleBase(obj.width, obj.height, layer.strokeWidth)
-  obj.set({ scaleX: layer.width / baseWidth, scaleY: layer.height / baseHeight })
+  obj.set({
+    scaleX: pathScale(obj.width, layer.strokeWidth, layer.width),
+    scaleY: pathScale(obj.height, layer.strokeWidth, layer.height),
+  })
   applyRotateCursor(obj)
   return obj
 }
@@ -836,24 +839,49 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     // hand its data to the store instead, so the *next* reconciliation pass
     // creates the "real" object via createPathObject like every other layer
     // (keeping idToObject/objectToId in sync, which this raw object bypassed).
+    //
+    // Only PencilBrush finishes as an actual fabric.Path — CircleBrush and
+    // SprayBrush finish as a fabric.Group of primitive shapes (circles /
+    // rects) with no `.path` data at all, which silently produced an empty,
+    // invisible PathLayer before this check existed. A Group's dot pattern
+    // has no sensible SVG-path representation, so it's rasterized into an
+    // image layer instead (same off-screen-canvas technique the "merge
+    // selection" flatten feature uses) rather than forced into PathLayer.
     const handlePathCreated = (e: { path?: fabric.FabricObject }) => {
-      const path = e.path as fabric.Path | undefined
-      if (!path) return
-      const topLeft = topLeftFromObject(path)
-      canvas.remove(path)
-      useEditorStore.getState().addPathLayer(
-        path.path,
-        {
-          x: Math.round(topLeft.x),
-          y: Math.round(topLeft.y),
-          width: Math.round(topLeft.width),
-          height: Math.round(topLeft.height),
-        },
-        {
-          stroke: (path.stroke as string) || useEditorStore.getState().drawColor,
-          strokeWidth: path.strokeWidth ?? useEditorStore.getState().drawWidth,
-        },
-      )
+      const created = e.path
+      if (!created) return
+      const topLeft = topLeftFromObject(created)
+      canvas.remove(created)
+
+      if (created instanceof fabric.Path) {
+        useEditorStore.getState().addPathLayer(
+          created.path,
+          {
+            x: Math.round(topLeft.x),
+            y: Math.round(topLeft.y),
+            width: Math.round(topLeft.width),
+            height: Math.round(topLeft.height),
+          },
+          {
+            stroke: (created.stroke as string) || useEditorStore.getState().drawColor,
+            strokeWidth: created.strokeWidth ?? useEditorStore.getState().drawWidth,
+          },
+        )
+        return
+      }
+
+      const width = Math.max(1, Math.round(topLeft.width))
+      const height = Math.max(1, Math.round(topLeft.height))
+      const temp = new fabric.StaticCanvas(undefined, { width, height })
+      created.set({ originX: 'center', originY: 'center', left: width / 2, top: height / 2 })
+      temp.add(created)
+      temp.renderAll()
+      const src = temp.toDataURL({ format: 'png', multiplier: 2 })
+      temp.dispose()
+      useEditorStore.getState().addImageLayer(src, width, height, {
+        x: Math.round(topLeft.x),
+        y: Math.round(topLeft.y),
+      })
     }
 
     canvas.on('object:modified', handleModified)
@@ -1027,6 +1055,14 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
         } else if (layer.type === 'path') {
           applyPathStyle(existing as fabric.Path, layer, folders)
         }
+        // The apply* calls above write left/top/scale/angle directly rather
+        // than through Fabric's own interactive transform flow, which is the
+        // only other path that keeps an object's cached corner coordinates
+        // (oCoords/aCoords — what the selection box's 9 handles are drawn
+        // from) in sync. Without this, undoing a resize snaps the object's
+        // own rendering back correctly but leaves its still-selected control
+        // box stuck at the pre-undo size until the next click.
+        existing.setCoords()
         canvas.moveObjectTo(existing, index)
         return
       }

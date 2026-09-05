@@ -27,6 +27,20 @@ beforeEach(() => {
   )
 })
 
+describe('addImageLayer', () => {
+  it('defaults to x=40, y=40 when no position is given', () => {
+    useEditorStore.getState().addImageLayer('/x.png', 100, 80)
+    const layer = useEditorStore.getState().layers[0]
+    expect(layer).toMatchObject({ type: 'image', x: 40, y: 40, width: 100, height: 80 })
+  })
+
+  it('places the layer at the given position when provided', () => {
+    useEditorStore.getState().addImageLayer('/x.png', 100, 80, { x: 12, y: 34 })
+    const layer = useEditorStore.getState().layers[0]
+    expect(layer).toMatchObject({ x: 12, y: 34 })
+  })
+})
+
 describe('addShapeLayer', () => {
   it('creates a shape layer with sensible per-kind defaults', () => {
     useEditorStore.getState().addShapeLayer('ellipse')
