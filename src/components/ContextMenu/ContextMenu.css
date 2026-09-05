@@ -1,0 +1,81 @@
+/* Reuses the toolbar's dark dropdown palette (--tb-* custom properties,
+   defined on :root in Toolbar.css) so the right-click menu matches the
+   toolbar's dropdowns — with local fallbacks in case this ever renders
+   before Toolbar.css has loaded. */
+.context-menu {
+  position: fixed;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 200px;
+  padding: 0.35rem;
+  background: var(--tb-bg-raised, #1f2129);
+  border: 1px solid var(--tb-border, #2c2f3a);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  animation: context-menu-in 100ms ease;
+}
+
+@keyframes context-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tb-text, #f3f4f6);
+  font-family: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.context-menu button:hover:not(:disabled) {
+  background: var(--tb-bg-hover, #2a2d38);
+}
+
+.context-menu button:focus-visible {
+  outline: 2px solid var(--tb-accent, #6366f1);
+  outline-offset: -2px;
+}
+
+.context-menu button:disabled {
+  color: var(--tb-text-muted, #9297a8);
+  cursor: default;
+  opacity: 0.5;
+}
+
+.context-menu button.is-danger {
+  color: #f87171;
+}
+
+.context-menu button.is-danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.14);
+}
+
+.context-menu-shortcut {
+  font-size: 0.72rem;
+  color: var(--tb-text-muted, #9297a8);
+}
+
+.context-menu-divider {
+  height: 1px;
+  margin: 0.3rem 0.2rem;
+  background: var(--tb-border, #2c2f3a);
+}

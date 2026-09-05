@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import * as fabric from 'fabric'
 import type { TComplexPathData } from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
@@ -30,6 +30,7 @@ import {
   pathScale,
   unionBoundingBox,
 } from './canvasHelpers'
+import { ContextMenu, type ContextMenuEntry } from '../ContextMenu/ContextMenu'
 import './Canvas.css'
 
 export interface CanvasHandle {
@@ -409,6 +410,16 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   )
   const [draggingGuide, setDraggingGuide] = useState<{ id: string; position: number } | null>(null)
   const isPanning = panMode || spaceHeld
+  // Right-click menu. `targetIds` is captured at open time rather than
+  // re-read from the store's live `selectedIds` while the menu is open, so
+  // the actions it renders always match what was actually under the cursor
+  // — an empty array means the artboard/background was clicked, not an
+  // object, and only shows the canvas-level "붙여넣기" action.
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; targetIds: string[] } | null>(null)
+  // Stable reference so ContextMenu's outside-click/Escape effect doesn't
+  // tear down and re-attach its window listeners on every Canvas re-render
+  // while the menu is open.
+  const closeContextMenu = useCallback(() => setContextMenu(null), [])
 
   useEffect(() => {
     zoomRef.current = zoom
@@ -427,6 +438,14 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const applyCanvasModification = useEditorStore((s) => s.applyCanvasModification)
   const replaceAll = useEditorStore((s) => s.replaceAll)
   const replaceLayersWithImage = useEditorStore((s) => s.replaceLayersWithImage)
+  const removeLayers = useEditorStore((s) => s.removeLayers)
+  const duplicateLayers = useEditorStore((s) => s.duplicateLayers)
+  const copyLayers = useEditorStore((s) => s.copyLayers)
+  const pasteLayers = useEditorStore((s) => s.pasteLayers)
+  const clipboard = useEditorStore((s) => s.clipboard)
+  const groupLayers = useEditorStore((s) => s.groupLayers)
+  const ungroupLayer = useEditorStore((s) => s.ungroupLayer)
+  const reorderLayer = useEditorStore((s) => s.reorderLayer)
   const drawMode = useEditorStore((s) => s.drawMode)
   const drawColor = useEditorStore((s) => s.drawColor)
   const drawWidth = useEditorStore((s) => s.drawWidth)
@@ -697,12 +716,116 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     selectLayers(ids)
   }
 
+  // Same AABB hit-test the marquee-select above uses against idToObject,
+  // walked topmost-first (end of the layers array = front of z-order) so a
+  // right-click on overlapping objects picks whatever's actually on top.
+  const hitTestLayerAt = (clientX: number, clientY: number): string | null => {
+    const canvas = fabricRef.current
+    if (!canvas) return null
+    const canvasRect = canvas.upperCanvasEl.getBoundingClientRect()
+    if (canvasRect.width === 0 || canvasRect.height === 0) return null
+    const scaleX = canvasRect.width / canvas.getWidth()
+    const scaleY = canvasRect.height / canvas.getHeight()
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const layer = layers[i]
+      const obj = idToObject.current.get(layer.id)
+      if (!obj || obj.visible === false) continue
+      const b = obj.getBoundingRect()
+      const left = canvasRect.left + b.left * scaleX
+      const top = canvasRect.top + b.top * scaleY
+      if (clientX >= left && clientX <= left + b.width * scaleX && clientY >= top && clientY <= top + b.height * scaleY) {
+        return layer.id
+      }
+    }
+    return null
+  }
+
+  const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isPanning) return
+    e.preventDefault()
+    const hitId = hitTestLayerAt(e.clientX, e.clientY)
+    if (!hitId) {
+      setContextMenu({ x: e.clientX, y: e.clientY, targetIds: [] })
+      return
+    }
+    const targetIds = selectedIds.length > 1 && selectedIds.includes(hitId) ? selectedIds : [hitId]
+    const alreadySelected =
+      targetIds.length === selectedIds.length && targetIds.every((id, i) => id === selectedIds[i])
+    if (!alreadySelected) selectLayers(targetIds)
+    setContextMenu({ x: e.clientX, y: e.clientY, targetIds })
+  }
+
+  const buildContextMenuEntries = (targetIds: string[]): ContextMenuEntry[] => {
+    if (targetIds.length === 0) {
+      return [
+        {
+          label: '붙여넣기',
+          shortcut: 'Ctrl/Cmd+V',
+          disabled: clipboard.length === 0,
+          onSelect: () => pasteLayers(),
+        },
+      ]
+    }
+
+    const entries: ContextMenuEntry[] = [
+      { label: '복사', shortcut: 'Ctrl/Cmd+C', onSelect: () => copyLayers(targetIds) },
+      {
+        label: '잘라내기',
+        shortcut: 'Ctrl/Cmd+X',
+        onSelect: () => {
+          copyLayers(targetIds)
+          removeLayers(targetIds)
+        },
+      },
+      {
+        label: '붙여넣기',
+        shortcut: 'Ctrl/Cmd+V',
+        disabled: clipboard.length === 0,
+        onSelect: () => pasteLayers(),
+      },
+      'separator',
+      { label: '복제', onSelect: () => duplicateLayers(targetIds) },
+    ]
+
+    if (targetIds.length > 1) {
+      entries.push({ label: '그룹으로 묶기', onSelect: () => groupLayers(targetIds) })
+    } else {
+      const [onlyId] = targetIds
+      entries.push(
+        'separator',
+        { label: '맨 앞으로 가져오기', onSelect: () => reorderLayer(onlyId, 'front') },
+        { label: '앞으로 가져오기', onSelect: () => reorderLayer(onlyId, 'forward') },
+        { label: '뒤로 보내기', onSelect: () => reorderLayer(onlyId, 'backward') },
+        { label: '맨 뒤로 보내기', onSelect: () => reorderLayer(onlyId, 'back') },
+      )
+      const layer = layers.find((l) => l.id === onlyId)
+      if (layer?.folderId) {
+        entries.push('separator', { label: '폴더에서 빼기', onSelect: () => ungroupLayer(onlyId) })
+      }
+    }
+
+    entries.push('separator', {
+      label: '삭제',
+      shortcut: 'Delete',
+      danger: true,
+      onSelect: () => removeLayers(targetIds),
+    })
+
+    return entries
+  }
+
   // Initialize the Fabric canvas once and wire canvas -> store event sync.
   useEffect(() => {
     if (!canvasElRef.current) return
     const canvas = new fabric.Canvas(canvasElRef.current, {
       backgroundColor: '#ffffff',
       preserveObjectStacking: true,
+      // Fabric defaults to true here, which swallows the native contextmenu
+      // event (preventDefault + stopPropagation) before it ever bubbles up
+      // to our own onContextMenu on canvas-scroll — right-click silently did
+      // nothing. Our handler calls preventDefault itself, so the browser's
+      // native menu still never shows.
+      stopContextMenu: false,
     })
     fabricRef.current = canvas
 
@@ -1216,6 +1339,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
         onPointerMove={isPanning ? undefined : handleBackgroundPointerMove}
         onPointerUp={isPanning ? undefined : handleBackgroundPointerUp}
         onPointerCancel={isPanning ? undefined : handleBackgroundPointerUp}
+        onContextMenu={handleContextMenu}
       >
         <div
           ref={zoomFrameRef}
@@ -1404,6 +1528,14 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
           ⤢
         </button>
       </div>
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          entries={buildContextMenuEntries(contextMenu.targetIds)}
+          onClose={closeContextMenu}
+        />
+      )}
     </div>
   )
 })
