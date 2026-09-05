@@ -319,3 +319,86 @@ describe('distributeLayers', () => {
     expect(xyOf(idC).x).toBe(500)
   })
 })
+
+describe('applyCanvasModification (Transform Again delta capture)', () => {
+  it('records a move delta', () => {
+    const idA = addRectAt(0, 0)
+    useEditorStore.getState().applyCanvasModification(idA, { x: 50, y: 30 })
+    expect(useEditorStore.getState().lastTransform).toEqual({ dx: 50, dy: 30, dRotation: 0 })
+  })
+
+  it('records a rotation delta independently of position', () => {
+    const idA = addRectAt(0, 0)
+    useEditorStore.getState().applyCanvasModification(idA, { rotation: 45 })
+    expect(useEditorStore.getState().lastTransform).toEqual({ dx: 0, dy: 0, dRotation: 45 })
+  })
+
+  it('does not overwrite the last transform with a no-op modification (e.g. a finished text edit that moved nothing)', () => {
+    const idA = addRectAt(0, 0)
+    useEditorStore.getState().applyCanvasModification(idA, { x: 50, y: 30 })
+    useEditorStore.getState().applyCanvasModification(idA, { x: 50, y: 30 })
+    expect(useEditorStore.getState().lastTransform).toEqual({ dx: 50, dy: 30, dRotation: 0 })
+  })
+})
+
+describe('repeatLastTransform', () => {
+  it('is a no-op with nothing recorded yet', () => {
+    const id = addRectAt(10, 10)
+    useEditorStore.getState().selectLayer(id)
+    useEditorStore.getState().repeatLastTransform()
+    expect(xyOf(id)).toEqual({ x: 10, y: 10 })
+  })
+
+  it('is a no-op with nothing selected', () => {
+    const idA = addRectAt(0, 0)
+    useEditorStore.getState().applyCanvasModification(idA, { x: 20, y: 20 })
+    useEditorStore.getState().selectLayer(null)
+    useEditorStore.getState().repeatLastTransform()
+    expect(xyOf(idA)).toEqual({ x: 20, y: 20 })
+  })
+
+  it('reapplies a recorded move delta to a different, currently selected layer', () => {
+    const idA = addRectAt(0, 0)
+    useEditorStore.getState().applyCanvasModification(idA, { x: 50, y: 30 })
+
+    const idB = addRectAt(100, 100)
+    useEditorStore.getState().selectLayer(idB)
+    useEditorStore.getState().repeatLastTransform()
+    expect(xyOf(idB)).toEqual({ x: 150, y: 130 })
+  })
+
+  it('adds the recorded rotation delta to the target layer\'s own existing rotation', () => {
+    const idA = addRectAt(0, 0)
+    useEditorStore.getState().applyCanvasModification(idA, { rotation: 30 })
+
+    const idB = addRectAt(50, 50)
+    useEditorStore.getState().updateLayerTransform(idB, { rotation: 10 })
+    useEditorStore.getState().selectLayer(idB)
+    useEditorStore.getState().repeatLastTransform()
+    expect(useEditorStore.getState().layers.find((l) => l.id === idB)!.rotation).toBe(40)
+  })
+
+  it('keeps applying the same delta on repeated calls (Cmd+D pressed multiple times)', () => {
+    const idA = addRectAt(0, 0)
+    useEditorStore.getState().applyCanvasModification(idA, { x: 10, y: 5 })
+
+    const idB = addRectAt(0, 0)
+    useEditorStore.getState().selectLayer(idB)
+    useEditorStore.getState().repeatLastTransform()
+    useEditorStore.getState().repeatLastTransform()
+    expect(xyOf(idB)).toEqual({ x: 20, y: 10 })
+  })
+
+  it('is undoable in a single step', () => {
+    const idA = addRectAt(0, 0)
+    useEditorStore.getState().applyCanvasModification(idA, { x: 10, y: 5 })
+
+    const idB = addRectAt(0, 0)
+    useEditorStore.getState().selectLayer(idB)
+    useEditorStore.getState().repeatLastTransform()
+    expect(xyOf(idB)).toEqual({ x: 10, y: 5 })
+
+    useEditorStore.getState().undo()
+    expect(xyOf(idB)).toEqual({ x: 0, y: 0 })
+  })
+})

@@ -61,6 +61,12 @@ interface EditorState {
   // localStorage — a UI convenience, not document content, so it's
   // excluded from undo history (same reasoning as toggleFolderCollapsed).
   recentColors: string[]
+  // Illustrator-style "Transform Again" (Cmd/Ctrl+D): the most recent
+  // canvas-driven move/rotate delta, replayable on whatever is selected
+  // later. Deliberately excludes scale/resize — only move and rotate are in
+  // scope — and is meta-state about the editing session rather than
+  // document content, so it's excluded from undo history.
+  lastTransform: { dx: number; dy: number; dRotation: number } | null
 
   setPreset: (presetId: string) => void
   addTextLayer: () => void
@@ -84,6 +90,9 @@ interface EditorState {
     id: string,
     patch: Partial<Pick<EditorLayer, 'x' | 'y' | 'width' | 'height' | 'rotation'>> & { text?: string },
   ) => void
+  // Reapplies `lastTransform` to every currently selected layer, in one
+  // undo step. A no-op with nothing recorded yet or nothing selected.
+  repeatLastTransform: () => void
   renameLayer: (id: string, name: string) => void
   removeLayer: (id: string) => void
   removeLayers: (ids: string[]) => void
@@ -148,6 +157,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   past: [],
   future: [],
   recentColors: loadRecentColors(),
+  lastTransform: null,
 
   setPreset: (presetId) => {
     set((state) => ({ ...pushHistory(state), presetId }))
@@ -305,16 +315,50 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   applyCanvasModification: (id, patch) => {
-    set((state) => ({
-      ...pushHistory(state),
-      layers: state.layers.map((layer) => {
-        if (layer.id !== id) return layer
-        const { text, ...transform } = patch
-        return layer.type === 'text' && text !== undefined
-          ? { ...layer, ...transform, text }
-          : { ...layer, ...transform }
-      }),
-    }))
+    set((state) => {
+      const layer = state.layers.find((l) => l.id === id)
+      // Fabric fires object:modified for a finished inline text edit too,
+      // where x/y/rotation are read back unchanged — only overwrite
+      // lastTransform when something actually moved or rotated, so an
+      // unrelated text edit can't silently erase a move/rotate the user is
+      // about to repeat with Cmd/Ctrl+D.
+      const dx = layer && patch.x !== undefined ? patch.x - layer.x : 0
+      const dy = layer && patch.y !== undefined ? patch.y - layer.y : 0
+      const dRotation = layer && patch.rotation !== undefined ? patch.rotation - layer.rotation : 0
+      const lastTransform =
+        dx !== 0 || dy !== 0 || dRotation !== 0 ? { dx, dy, dRotation } : state.lastTransform
+
+      return {
+        ...pushHistory(state),
+        lastTransform,
+        layers: state.layers.map((l) => {
+          if (l.id !== id) return l
+          const { text, ...transform } = patch
+          return l.type === 'text' && text !== undefined ? { ...l, ...transform, text } : { ...l, ...transform }
+        }),
+      }
+    })
+  },
+
+  repeatLastTransform: () => {
+    set((state) => {
+      const { lastTransform, selectedIds } = state
+      if (!lastTransform || selectedIds.length === 0) return state
+      const idSet = new Set(selectedIds)
+      return {
+        ...pushHistory(state),
+        layers: state.layers.map((l) =>
+          idSet.has(l.id)
+            ? {
+                ...l,
+                x: l.x + lastTransform.dx,
+                y: l.y + lastTransform.dy,
+                rotation: l.rotation + lastTransform.dRotation,
+              }
+            : l,
+        ),
+      }
+    })
   },
 
   updateTextStyle: (id, style) => {

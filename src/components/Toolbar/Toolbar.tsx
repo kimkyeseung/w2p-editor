@@ -18,6 +18,7 @@ import {
   MockupIcon,
   RectangleShapeIcon,
   RedoIcon,
+  RepeatTransformIcon,
   SaveIcon,
   TextToolIcon,
   TriangleShapeIcon,
@@ -58,6 +59,8 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
   const redo = useEditorStore((s) => s.redo)
   const canUndo = useEditorStore((s) => s.past.length > 0)
   const canRedo = useEditorStore((s) => s.future.length > 0)
+  const repeatLastTransform = useEditorStore((s) => s.repeatLastTransform)
+  const canRepeatTransform = useEditorStore((s) => s.lastTransform !== null && s.selectedIds.length > 0)
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -186,6 +189,16 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
           title="다시 실행 (Shift+Ctrl/Cmd+Z)"
         >
           <RedoIcon />
+        </button>
+        <span className="toolbar-segment-divider" />
+        <button
+          type="button"
+          className="toolbar-icon-btn"
+          onClick={repeatLastTransform}
+          disabled={!canRepeatTransform}
+          title="변형 반복 (Ctrl/Cmd+D)"
+        >
+          <RepeatTransformIcon />
         </button>
       </div>
 

@@ -259,6 +259,15 @@ export function RedoIcon({ className }: IconProps) {
   )
 }
 
+export function RepeatTransformIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="2.5" y="7" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="7.5" y="2.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  )
+}
+
 export function FolderMenuIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

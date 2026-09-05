@@ -38,6 +38,7 @@ function App() {
   const undo = useEditorStore((s) => s.undo)
   const redo = useEditorStore((s) => s.redo)
   const removeLayers = useEditorStore((s) => s.removeLayers)
+  const repeatLastTransform = useEditorStore((s) => s.repeatLastTransform)
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const layers = useEditorStore((s) => s.layers)
   const folders = useEditorStore((s) => s.folders)
@@ -54,6 +55,14 @@ function App() {
         else undo()
         return
       }
+      // Cmd/Ctrl+D is the browser's "bookmark this page" shortcut — always
+      // prevent it here regardless of whether there's anything to repeat,
+      // so it never leaks through to the browser while editing.
+      if (meta && e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        repeatLastTransform()
+        return
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
         e.preventDefault()
         removeLayers(selectedIds)
@@ -61,7 +70,7 @@ function App() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo, removeLayers, selectedIds])
+  }, [undo, redo, removeLayers, repeatLastTransform, selectedIds])
 
   const handleOpenMockup = () => {
     const dataUrl = canvasHandleRef.current?.getDesignDataUrl()

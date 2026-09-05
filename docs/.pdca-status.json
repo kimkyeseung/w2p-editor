@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-09-05T17:21:24.572Z",
+  "lastUpdated": "2026-09-05T17:55:03.745Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -38,7 +38,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:40:10.127Z",
-        "lastUpdated": "2026-09-05T12:22:23.763Z"
+        "lastUpdated": "2026-09-05T17:45:06.404Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/common/icons.tsx"
     },
@@ -51,7 +51,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:41:19.891Z",
-        "lastUpdated": "2026-09-05T17:21:24.572Z"
+        "lastUpdated": "2026-09-05T17:55:03.745Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/store/editorStore.test.ts"
     },
@@ -77,7 +77,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:46:20.922Z",
-        "lastUpdated": "2026-09-05T12:23:05.467Z"
+        "lastUpdated": "2026-09-05T17:45:58.377Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Toolbar/Toolbar.tsx"
     },
@@ -194,7 +194,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-05T17:21:24.572Z"
+    "lastActivity": "2026-09-05T17:55:03.745Z"
   },
   "history": [
     {
@@ -2155,6 +2155,72 @@
     },
     {
       "timestamp": "2026-09-05T17:21:24.572Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:43:45.747Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:43:54.398Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:44:09.519Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:44:21.975Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:44:31.607Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:44:41.892Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:45:06.404Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:45:22.616Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:45:31.764Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:45:58.377Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T17:55:03.745Z",
       "feature": "store",
       "phase": "do",
       "action": "updated"
