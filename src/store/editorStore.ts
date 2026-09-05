@@ -107,6 +107,14 @@ interface EditorState {
   removeLayers: (ids: string[]) => void
   duplicateLayer: (id: string) => void
   duplicateLayers: (ids: string[]) => void
+  // Flatten/merge: swaps every given layer for one new rasterized image
+  // layer in a single step (Canvas.tsx does the actual rendering — this
+  // just commits the result). Inserted where the topmost merged layer sat,
+  // joining its folder if every merged layer shared the same one.
+  replaceLayersWithImage: (
+    ids: string[],
+    image: { src: string; x: number; y: number; width: number; height: number },
+  ) => void
   toggleLock: (id: string) => void
   toggleVisible: (id: string) => void
   reorderLayer: (id: string, direction: 'front' | 'back' | 'forward' | 'backward') => void
@@ -492,6 +500,49 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         selectedId: newIds.length === 1 ? newIds[0] : null,
         selectedIds: newIds,
       }
+    })
+  },
+
+  replaceLayersWithImage: (ids, image) => {
+    if (ids.length === 0) return
+    set((state) => {
+      const idSet = new Set(ids)
+      const merged = state.layers.filter((l) => idSet.has(l.id))
+      if (merged.length === 0) return state
+
+      let topmostIndex = -1
+      state.layers.forEach((l, i) => {
+        if (idSet.has(l.id)) topmostIndex = i
+      })
+      const remaining = state.layers.filter((l) => !idSet.has(l.id))
+      const insertAt = state.layers.slice(0, topmostIndex + 1).filter((l) => !idSet.has(l.id)).length
+
+      const folderIds = new Set(merged.map((l) => l.folderId))
+      const folderId = folderIds.size === 1 ? [...folderIds][0] : undefined
+
+      const newId = createId()
+      const newLayer: ImageLayer = {
+        id: newId,
+        type: 'image',
+        name: `병합 이미지 ${state.layers.filter((l) => l.type === 'image').length + 1}`,
+        locked: false,
+        visible: true,
+        x: image.x,
+        y: image.y,
+        width: image.width,
+        height: image.height,
+        rotation: 0,
+        opacity: 1,
+        shadow: { enabled: false, color: '#000000', blur: 10, offsetX: 5, offsetY: 5 },
+        border: { enabled: false, color: '#000000', width: 2 },
+        flipX: false,
+        flipY: false,
+        blendMode: 'source-over',
+        src: image.src,
+        folderId,
+      }
+      const layers = [...remaining.slice(0, insertAt), newLayer, ...remaining.slice(insertAt)]
+      return { ...pushHistory(state), layers, selectedId: newId, selectedIds: [newId] }
     })
   },
 

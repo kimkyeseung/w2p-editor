@@ -90,3 +90,39 @@ export const isLayerLocked = (layer: Pick<EditorLayer, 'locked' | 'folderId'>, f
   const folder = folderOf(layer, folders)
   return !!folder?.locked
 }
+
+// The layer's actual on-canvas footprint — its unrotated x/y/width/height is
+// only its bounding box when rotation is 0; anything else needs its four
+// corners rotated around the center and re-bounded.
+export const layerBoundingBox = (layer: Pick<EditorLayer, 'x' | 'y' | 'width' | 'height' | 'rotation'>) => {
+  const { centerX, centerY } = centerFromTopLeft(layer)
+  if (layer.rotation % 360 === 0) {
+    return { minX: layer.x, minY: layer.y, maxX: layer.x + layer.width, maxY: layer.y + layer.height }
+  }
+  const rad = (layer.rotation * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  const hw = layer.width / 2
+  const hh = layer.height / 2
+  const corners = [
+    [-hw, -hh],
+    [hw, -hh],
+    [hw, hh],
+    [-hw, hh],
+  ].map(([dx, dy]) => ({ x: centerX + dx * cos - dy * sin, y: centerY + dx * sin + dy * cos }))
+  const xs = corners.map((c) => c.x)
+  const ys = corners.map((c) => c.y)
+  return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) }
+}
+
+// The combined footprint of a whole set of layers — e.g. for flattening a
+// multi-layer selection down to a single image sized to fit all of them.
+export const unionBoundingBox = (layers: Pick<EditorLayer, 'x' | 'y' | 'width' | 'height' | 'rotation'>[]) => {
+  const boxes = layers.map(layerBoundingBox)
+  return {
+    minX: Math.min(...boxes.map((b) => b.minX)),
+    minY: Math.min(...boxes.map((b) => b.minY)),
+    maxX: Math.max(...boxes.map((b) => b.maxX)),
+    maxY: Math.max(...boxes.map((b) => b.maxY)),
+  }
+}

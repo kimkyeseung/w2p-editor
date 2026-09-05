@@ -399,6 +399,16 @@ export function ClipMaskIcon({ className }: IconProps) {
   )
 }
 
+export function MergeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="2.5" y="2.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.1" opacity="0.45" />
+      <rect x="6.5" y="6.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.1" opacity="0.45" />
+      <rect x="4.3" y="4.3" width="7.4" height="7.4" rx="1" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  )
+}
+
 export function ChevronDownIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

@@ -14,6 +14,7 @@ import {
   ImageIcon,
   LineShapeIcon,
   LockIcon,
+  MergeIcon,
   RectangleShapeIcon,
   SendBackIcon,
   TrashIcon,
@@ -280,7 +281,11 @@ function FolderRow({ folder, members, maskIds }: FolderRowProps) {
   )
 }
 
-export function LayerPanel() {
+interface LayerPanelProps {
+  onFlattenSelection: () => void
+}
+
+export function LayerPanel({ onFlattenSelection }: LayerPanelProps) {
   const layers = useEditorStore((s) => s.layers)
   const folders = useEditorStore((s) => s.folders)
   const selectedIds = useEditorStore((s) => s.selectedIds)
@@ -309,6 +314,9 @@ export function LayerPanel() {
               </button>
               <button type="button" title="선택 복제" onClick={() => duplicateLayers(selectedIds)}>
                 <DuplicateIcon />
+              </button>
+              <button type="button" title="선택 병합 (이미지로 병합)" onClick={onFlattenSelection}>
+                <MergeIcon />
               </button>
               <button type="button" title="선택 삭제" onClick={() => removeLayers(selectedIds)}>
                 <TrashIcon />

@@ -11,7 +11,15 @@ import {
   saveToLocalStorage,
   exportProjectFile,
 } from '../../utils/canvasSerialization'
-import { buildBorderProps, buildFill, buildShadow, centerFromTopLeft, isLayerLocked, isLayerVisible } from './canvasHelpers'
+import {
+  buildBorderProps,
+  buildFill,
+  buildShadow,
+  centerFromTopLeft,
+  isLayerLocked,
+  isLayerVisible,
+  unionBoundingBox,
+} from './canvasHelpers'
 import './Canvas.css'
 
 export interface CanvasHandle {
@@ -21,6 +29,7 @@ export interface CanvasHandle {
   exportProjectFile: () => void
   importProjectFile: (file: File) => Promise<void>
   getDesignDataUrl: () => string | null
+  flattenSelection: () => Promise<void>
 }
 
 const topLeftFromObject = (obj: fabric.FabricObject) => {
@@ -182,6 +191,76 @@ const createShapeObject = (layer: ShapeLayer, folders: LayerFolder[]): fabric.Ob
   return obj
 }
 
+// Renders the given layers (in their original z-order) onto a detached,
+// off-DOM canvas sized to their combined bounding box, then exports that as
+// a single PNG data URL — the raw material for "flatten selection". Reuses
+// the exact same object-builders as the live canvas, so shadow/border/
+// gradient/opacity/blend-mode/flip/rotation and even clip-mask relationships
+// come along for free; multiplier: 2 matches exportCanvasAsPng's own
+// convention for crisp (retina-ish) raster output.
+const buildFlattenedImage = async (
+  selectedIds: string[],
+  layers: EditorLayer[],
+  folders: LayerFolder[],
+): Promise<{ src: string; x: number; y: number; width: number; height: number } | null> => {
+  const idSet = new Set(selectedIds)
+  const selected = layers.filter((l) => idSet.has(l.id))
+  if (selected.length === 0) return null
+
+  const box = unionBoundingBox(selected)
+  const width = Math.max(1, Math.round(box.maxX - box.minX))
+  const height = Math.max(1, Math.round(box.maxY - box.minY))
+  const temp = new fabric.StaticCanvas(undefined, { width, height })
+
+  // A layer used as a clip mask by another layer *in this same selection*
+  // shouldn't also render independently here, matching how the main canvas
+  // treats masks (see maskedAwayIds in the reconciliation effect below). A
+  // mask whose target isn't part of this selection is left to render
+  // normally — an unusual case not worth extra bookkeeping to special-case.
+  const maskedAwayIds = new Set(
+    selected.map((l) => l.clipPathId).filter((id): id is string => id !== undefined && idSet.has(id)),
+  )
+
+  for (const layer of layers) {
+    if (!idSet.has(layer.id) || maskedAwayIds.has(layer.id) || !isLayerVisible(layer, folders)) continue
+
+    let obj: fabric.Object | null = null
+    if (layer.type === 'text') {
+      obj = createTextObject(layer, folders)
+    } else if (layer.type === 'shape') {
+      obj = createShapeObject(layer, folders)
+    } else {
+      try {
+        const img = await fabric.FabricImage.fromURL(layer.src)
+        applyImageLayer(img, layer, folders)
+        obj = img
+      } catch {
+        continue
+      }
+    }
+
+    // Shift from the original (whole-canvas) coordinate space into this
+    // temp canvas's local space, whose (0,0) is the selection box's corner.
+    obj.set({ left: (obj.left ?? 0) - box.minX, top: (obj.top ?? 0) - box.minY })
+
+    const maskLayer = layer.clipPathId ? layers.find((l) => l.id === layer.clipPathId) : undefined
+    if (maskLayer && maskLayer.type !== 'image') {
+      const clipObj = maskLayer.type === 'text' ? createTextObject(maskLayer, folders) : createShapeObject(maskLayer, folders)
+      clipObj.absolutePositioned = true
+      clipObj.set({ left: (clipObj.left ?? 0) - box.minX, top: (clipObj.top ?? 0) - box.minY })
+      obj.set({ clipPath: clipObj })
+    }
+
+    temp.add(obj)
+  }
+
+  temp.renderAll()
+  const src = temp.toDataURL({ format: 'png', multiplier: 2 })
+  temp.dispose()
+
+  return { src, x: box.minX, y: box.minY, width, height }
+}
+
 // The zoom/pan view state below is a pure presentation concern (how much of
 // the artwork is visible and at what scale) — it never touches Fabric's own
 // coordinate system, so it can't disturb the center/top-left conversion above.
@@ -282,6 +361,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const selectLayers = useEditorStore((s) => s.selectLayers)
   const applyCanvasModification = useEditorStore((s) => s.applyCanvasModification)
   const replaceAll = useEditorStore((s) => s.replaceAll)
+  const replaceLayersWithImage = useEditorStore((s) => s.replaceLayersWithImage)
 
   const preset = useMemo(() => getPresetById(presetId), [presetId])
   const bleedPx = mmToPx(preset.bleedMm)
@@ -953,6 +1033,10 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       const canvas = fabricRef.current
       if (!canvas || layers.length === 0) return null
       return canvas.toDataURL({ format: 'png', multiplier: 2 })
+    },
+    flattenSelection: async () => {
+      const result = await buildFlattenedImage(selectedIds, layers, folders)
+      if (result) replaceLayersWithImage(selectedIds, result)
     },
   }))
 

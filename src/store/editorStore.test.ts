@@ -600,3 +600,113 @@ describe('addGuide / updateGuide / removeGuide / clearGuides', () => {
     expect(useEditorStore.getState().guides).toEqual([])
   })
 })
+
+describe('replaceLayersWithImage', () => {
+  it('replaces the given layers with a single image layer using the given geometry', () => {
+    useEditorStore.getState().addShapeLayer('ellipse')
+    const aId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const bId = useEditorStore.getState().layers[1].id
+
+    useEditorStore.getState().replaceLayersWithImage([aId, bId], {
+      src: 'data:image/png;base64,x',
+      x: 10,
+      y: 20,
+      width: 300,
+      height: 200,
+    })
+
+    const { layers } = useEditorStore.getState()
+    expect(layers).toHaveLength(1)
+    expect(layers[0].type).toBe('image')
+    expect(layers[0]).toMatchObject({ x: 10, y: 20, width: 300, height: 200 })
+  })
+
+  it('positions the new layer at the topmost z-order of the merged layers', () => {
+    useEditorStore.getState().addShapeLayer('ellipse') // A
+    const aId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('rectangle') // B — stays, in between
+    const bId = useEditorStore.getState().layers[1].id
+    useEditorStore.getState().addShapeLayer('triangle') // C
+    const cId = useEditorStore.getState().layers[2].id
+
+    useEditorStore.getState().replaceLayersWithImage([aId, cId], {
+      src: 'x',
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+    })
+
+    const { layers } = useEditorStore.getState()
+    expect(layers.map((l) => l.id)).toEqual([bId, layers[1].id])
+    expect(layers[1].type).toBe('image')
+  })
+
+  it("joins the merged layers' folder when they all share the same one", () => {
+    useEditorStore.getState().addShapeLayer('ellipse')
+    const aId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const bId = useEditorStore.getState().layers[1].id
+    useEditorStore.getState().groupLayers([aId, bId])
+    const folderId = useEditorStore.getState().layers.find((l) => l.id === aId)!.folderId
+
+    useEditorStore.getState().replaceLayersWithImage([aId, bId], {
+      src: 'x',
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+    })
+
+    expect(useEditorStore.getState().layers[0].folderId).toBe(folderId)
+  })
+
+  it('leaves the new layer without a folder when the merged layers span different folders', () => {
+    useEditorStore.getState().addShapeLayer('ellipse')
+    const aId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('rectangle') // ungrouped
+
+    useEditorStore.getState().replaceLayersWithImage([aId, useEditorStore.getState().layers[1].id], {
+      src: 'x',
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+    })
+
+    expect(useEditorStore.getState().layers[0].folderId).toBeUndefined()
+  })
+
+  it('selects the new image layer', () => {
+    useEditorStore.getState().addShapeLayer('ellipse')
+    const aId = useEditorStore.getState().layers[0].id
+
+    useEditorStore.getState().replaceLayersWithImage([aId], { src: 'x', x: 0, y: 0, width: 10, height: 10 })
+
+    const newId = useEditorStore.getState().layers[0].id
+    expect(useEditorStore.getState().selectedId).toBe(newId)
+    expect(useEditorStore.getState().selectedIds).toEqual([newId])
+  })
+
+  it('is undoable in a single step', () => {
+    useEditorStore.getState().addShapeLayer('ellipse')
+    useEditorStore.getState().addShapeLayer('rectangle')
+
+    const ids = useEditorStore.getState().layers.map((l) => l.id)
+    useEditorStore.getState().replaceLayersWithImage(ids, { src: 'x', x: 0, y: 0, width: 10, height: 10 })
+    expect(useEditorStore.getState().layers).toHaveLength(1)
+
+    useEditorStore.getState().undo()
+    expect(useEditorStore.getState().layers.map((l) => l.id)).toEqual(ids)
+  })
+
+  it('is a no-op for an empty id list', () => {
+    useEditorStore.getState().addShapeLayer('ellipse')
+    const before = useEditorStore.getState().layers
+
+    useEditorStore.getState().replaceLayersWithImage([], { src: 'x', x: 0, y: 0, width: 10, height: 10 })
+
+    expect(useEditorStore.getState().layers).toBe(before)
+  })
+})

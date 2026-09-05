@@ -81,6 +81,11 @@ function App() {
     setMockupDataUrl(dataUrl)
   }
 
+  const handleFlattenSelection = async () => {
+    await canvasHandleRef.current?.flattenSelection()
+    showToast('선택한 레이어를 하나의 이미지로 병합했습니다.')
+  }
+
   return (
     <div className="app">
       <Toolbar
@@ -91,7 +96,7 @@ function App() {
       />
       <div className="workspace">
         <aside className={`side-panel layer-panel-wrap ${mobileTab === 'layers' ? 'is-active' : ''}`}>
-          <LayerPanel />
+          <LayerPanel onFlattenSelection={handleFlattenSelection} />
         </aside>
         <main className="canvas-wrap">
           <Canvas ref={canvasHandleRef} />
