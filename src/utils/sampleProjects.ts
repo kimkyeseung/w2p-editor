@@ -15,6 +15,7 @@ const textLayer = (
   locked: false,
   visible: true,
   rotation: 0,
+  opacity: 1,
   fontFamily: 'Noto Sans KR',
   fontSize: 14,
   color: '#111827',
@@ -34,6 +35,7 @@ const imageLayer = (
   locked: false,
   visible: true,
   rotation: 0,
+  opacity: 1,
   ...overrides,
 })
 

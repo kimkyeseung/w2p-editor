@@ -71,6 +71,7 @@ const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer, fold
   const locked = isLayerLocked(layer, folders)
   obj.set({
     visible,
+    opacity: layer.opacity,
     selectable: !locked && visible,
     evented: !locked && visible,
   })
@@ -126,6 +127,7 @@ const createTextObject = (layer: TextLayer, folders: LayerFolder[]): fabric.Text
     fill: layer.color,
     textAlign: layer.align,
     angle: layer.rotation,
+    opacity: layer.opacity,
     visible,
     selectable: !locked && visible,
     evented: !locked && visible,
@@ -176,6 +178,7 @@ const createShapeObject = (layer: ShapeLayer, folders: LayerFolder[]): fabric.Ob
     fill: layer.shape === 'line' ? '' : layer.fill,
     stroke: layer.stroke,
     strokeWidth: layer.strokeWidth,
+    opacity: layer.opacity,
     visible,
     selectable: !locked && visible,
     evented: !locked && visible,

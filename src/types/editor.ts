@@ -11,6 +11,8 @@ export interface LayerBase {
   width: number
   height: number
   rotation: number
+  // 0-1, applies to every layer type (Fabric's own opacity range).
+  opacity: number
   // Layers sharing a folderId are kept contiguous in the layers array (that
   // contiguous run *is* the folder's position in z-order) — a folder has no
   // z-order slot of its own, it's purely a layer-panel grouping concept.

@@ -83,6 +83,12 @@ export function PropertiesPanel() {
           suffix="°"
           onCommit={(v) => updateLayerTransform(layer.id, { rotation: v })}
         />
+        <NumberField
+          label="불투명도"
+          value={layer.opacity * 100}
+          suffix="%"
+          onCommit={(v) => updateLayerTransform(layer.id, { opacity: Math.min(1, Math.max(0, v / 100)) })}
+        />
       </div>
 
       <div className="prop-section">

@@ -35,7 +35,7 @@ interface EditorState {
   addShapeLayer: (shape: ShapeKind) => void
   updateLayerTransform: (
     id: string,
-    transform: Partial<Pick<EditorLayer, 'x' | 'y' | 'width' | 'height' | 'rotation'>>,
+    transform: Partial<Pick<EditorLayer, 'x' | 'y' | 'width' | 'height' | 'rotation' | 'opacity'>>,
   ) => void
   updateTextStyle: (id: string, style: Partial<Omit<TextLayer, keyof EditorLayer | 'type'>>) => void
   updateShapeStyle: (id: string, style: Partial<Omit<ShapeLayer, keyof EditorLayer | 'type' | 'shape'>>) => void
@@ -120,6 +120,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       width: 200,
       height: 28,
       rotation: 0,
+      opacity: 1,
       text: '텍스트를 입력하세요',
       fontFamily: 'Noto Sans KR',
       fontSize: 24,
@@ -151,6 +152,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       width,
       height,
       rotation: 0,
+      opacity: 1,
       src,
     }
     set((state) => ({
@@ -188,6 +190,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       width,
       height,
       rotation: 0,
+      opacity: 1,
       fill: '#e5e7eb',
       stroke: '#111827',
       strokeWidth: 2,
