@@ -34,6 +34,11 @@ export interface TextLayer extends LayerBase {
   align: 'left' | 'center' | 'right'
   fontWeight: 'normal' | 'bold'
   fontStyle: 'normal' | 'italic'
+  // Fabric's own units: charSpacing is 1/1000 em (so 100 = +0.1em per
+  // character), lineHeight is a unitless multiplier of font size (Fabric's
+  // own default is 1.16, not CSS's "normal").
+  charSpacing: number
+  lineHeight: number
 }
 
 export interface ImageLayer extends LayerBase {

@@ -164,6 +164,19 @@ export function PropertiesPanel() {
               기울임
             </button>
           </div>
+          <div className="prop-grid">
+            <NumberField
+              label="자간"
+              value={textLayer.charSpacing}
+              onCommit={(v) => updateTextStyle(textLayer.id, { charSpacing: v })}
+            />
+            <NumberField
+              label="행간"
+              value={textLayer.lineHeight}
+              step={0.1}
+              onCommit={(v) => updateTextStyle(textLayer.id, { lineHeight: Math.max(0.1, v) })}
+            />
+          </div>
           <label className="prop-field">
             <span>색상</span>
             <input

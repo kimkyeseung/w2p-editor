@@ -5,23 +5,29 @@ interface NumberFieldProps {
   label: string
   value: number
   suffix?: string
+  // Precision follows step (e.g. 0.1 -> 1 decimal place); default 1 keeps
+  // the original whole-number-only behavior for x/y/width/height/etc.
+  step?: number
   onCommit: (value: number) => void
 }
 
-export function NumberField({ label, value, suffix, onCommit }: NumberFieldProps) {
-  const [draft, setDraft] = useState(String(Math.round(value)))
+const decimalsFor = (step: number) => Math.max(0, -Math.floor(Math.log10(step)))
+const formatValue = (value: number, step: number) => value.toFixed(decimalsFor(step))
+
+export function NumberField({ label, value, suffix, step = 1, onCommit }: NumberFieldProps) {
+  const [draft, setDraft] = useState(formatValue(value, step))
   const [focused, setFocused] = useState(false)
 
   useEffect(() => {
-    if (!focused) setDraft(String(Math.round(value)))
-  }, [value, focused])
+    if (!focused) setDraft(formatValue(value, step))
+  }, [value, step, focused])
 
   const commit = () => {
     const parsed = Number(draft)
     if (Number.isFinite(parsed)) {
       onCommit(parsed)
     } else {
-      setDraft(String(Math.round(value)))
+      setDraft(formatValue(value, step))
     }
   }
 
@@ -31,6 +37,7 @@ export function NumberField({ label, value, suffix, onCommit }: NumberFieldProps
       <div className="ui-number-field-wrap">
         <input
           type="number"
+          step={step}
           value={draft}
           onFocus={() => setFocused(true)}
           onChange={(e) => setDraft(e.target.value)}

@@ -21,6 +21,8 @@ const textLayer = (
   align: 'left',
   fontWeight: 'normal',
   fontStyle: 'normal',
+  charSpacing: 0,
+  lineHeight: 1.16,
   ...overrides,
 })
 
