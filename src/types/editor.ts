@@ -37,6 +37,9 @@ export interface LayerBase {
   border: LayerBorder
   flipX: boolean
   flipY: boolean
+  // A GlobalCompositeOperation value (e.g. 'multiply', 'screen'); 'source-over'
+  // is Fabric's own default and reads as "normal" blending.
+  blendMode: GlobalCompositeOperation
   // Layers sharing a folderId are kept contiguous in the layers array (that
   // contiguous run *is* the folder's position in z-order) — a folder has no
   // z-order slot of its own, it's purely a layer-panel grouping concept.

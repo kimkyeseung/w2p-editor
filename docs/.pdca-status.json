@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-09-05T11:09:21.032Z",
+  "lastUpdated": "2026-09-05T11:13:12.142Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -38,7 +38,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:40:10.127Z",
-        "lastUpdated": "2026-09-05T11:08:37.367Z"
+        "lastUpdated": "2026-09-05T11:12:36.253Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/utils/sampleProjects.ts"
     },
@@ -51,7 +51,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:41:19.891Z",
-        "lastUpdated": "2026-09-05T11:08:32.546Z"
+        "lastUpdated": "2026-09-05T11:12:31.757Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/store/editorStore.ts"
     },
@@ -64,7 +64,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:45:57.583Z",
-        "lastUpdated": "2026-09-05T11:08:55.232Z"
+        "lastUpdated": "2026-09-05T11:12:53.007Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Canvas/Canvas.tsx"
     },
@@ -103,7 +103,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:47:41.315Z",
-        "lastUpdated": "2026-09-05T11:09:21.032Z"
+        "lastUpdated": "2026-09-05T11:13:12.142Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/PropertiesPanel/PropertiesPanel.tsx"
     },
@@ -194,7 +194,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-05T11:09:21.032Z"
+    "lastActivity": "2026-09-05T11:13:12.142Z"
   },
   "history": [
     {
@@ -1861,6 +1861,60 @@
     },
     {
       "timestamp": "2026-09-05T11:09:21.032Z",
+      "feature": "PropertiesPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:12:14.194Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:12:26.923Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:12:31.757Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:12:36.253Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:12:42.842Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:12:47.897Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:12:53.007Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:13:05.903Z",
+      "feature": "PropertiesPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:13:12.142Z",
       "feature": "PropertiesPanel",
       "phase": "do",
       "action": "updated"

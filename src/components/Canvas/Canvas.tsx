@@ -103,6 +103,7 @@ const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer, fold
     ...(layer.type === 'shape' ? {} : buildBorderProps(layer.border)),
     flipX: layer.flipX,
     flipY: layer.flipY,
+    globalCompositeOperation: layer.blendMode,
     selectable: !locked && visible,
     evented: !locked && visible,
   })
@@ -163,6 +164,7 @@ const createTextObject = (layer: TextLayer, folders: LayerFolder[]): fabric.Text
     ...buildBorderProps(layer.border),
     flipX: layer.flipX,
     flipY: layer.flipY,
+    globalCompositeOperation: layer.blendMode,
     visible,
     selectable: !locked && visible,
     evented: !locked && visible,
@@ -217,6 +219,7 @@ const createShapeObject = (layer: ShapeLayer, folders: LayerFolder[]): fabric.Ob
     shadow: buildShadow(layer.shadow),
     flipX: layer.flipX,
     flipY: layer.flipY,
+    globalCompositeOperation: layer.blendMode,
     visible,
     selectable: !locked && visible,
     evented: !locked && visible,

@@ -20,6 +20,7 @@ const textLayer = (
   border: { enabled: false, color: '#000000', width: 2 },
   flipX: false,
   flipY: false,
+  blendMode: 'source-over',
   fontFamily: 'Noto Sans KR',
   fontSize: 14,
   color: '#111827',
@@ -44,6 +45,7 @@ const imageLayer = (
   border: { enabled: false, color: '#000000', width: 2 },
   flipX: false,
   flipY: false,
+  blendMode: 'source-over',
   ...overrides,
 })
 

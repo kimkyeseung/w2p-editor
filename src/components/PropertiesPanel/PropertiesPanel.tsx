@@ -14,6 +14,25 @@ const FONT_OPTIONS = [
   'Courier New',
 ]
 
+const BLEND_MODE_OPTIONS: { value: GlobalCompositeOperation; label: string }[] = [
+  { value: 'source-over', label: '표준' },
+  { value: 'multiply', label: '곱하기' },
+  { value: 'screen', label: '스크린' },
+  { value: 'overlay', label: '오버레이' },
+  { value: 'darken', label: '어둡게' },
+  { value: 'lighten', label: '밝게' },
+  { value: 'color-dodge', label: '색상 닷지' },
+  { value: 'color-burn', label: '색상 번' },
+  { value: 'hard-light', label: '하드 라이트' },
+  { value: 'soft-light', label: '소프트 라이트' },
+  { value: 'difference', label: '차이' },
+  { value: 'exclusion', label: '제외' },
+  { value: 'hue', label: '색조' },
+  { value: 'saturation', label: '채도' },
+  { value: 'color', label: '색상' },
+  { value: 'luminosity', label: '광도' },
+]
+
 export function PropertiesPanel() {
   const layers = useEditorStore((s) => s.layers)
   const selectedId = useEditorStore((s) => s.selectedId)
@@ -136,6 +155,21 @@ export function PropertiesPanel() {
             세로 반전
           </button>
         </div>
+        <label className="prop-field">
+          <span>블렌드 모드</span>
+          <select
+            value={layer.blendMode}
+            onChange={(e) =>
+              updateLayerTransform(layer.id, { blendMode: e.target.value as GlobalCompositeOperation })
+            }
+          >
+            {BLEND_MODE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="prop-section">
