@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-09-05T11:43:54.309Z",
+  "lastUpdated": "2026-09-05T12:06:30.007Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -38,9 +38,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:40:10.127Z",
-        "lastUpdated": "2026-09-05T11:40:37.281Z"
+        "lastUpdated": "2026-09-05T11:58:52.471Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/w2p/vite.config.ts"
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/common/icons.tsx"
     },
     "store": {
       "phase": "do",
@@ -77,7 +77,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:46:20.922Z",
-        "lastUpdated": "2026-09-05T05:42:22.600Z"
+        "lastUpdated": "2026-09-05T12:06:30.007Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Toolbar/Toolbar.tsx"
     },
@@ -194,7 +194,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-05T11:43:54.309Z"
+    "lastActivity": "2026-09-05T12:06:30.007Z"
   },
   "history": [
     {
@@ -2030,6 +2030,42 @@
     {
       "timestamp": "2026-09-05T11:43:54.309Z",
       "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:58:52.471Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:59:23.975Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T12:05:44.629Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T12:06:00.697Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T12:06:14.819Z",
+      "feature": "Toolbar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T12:06:30.007Z",
+      "feature": "Toolbar",
       "phase": "do",
       "action": "updated"
     }

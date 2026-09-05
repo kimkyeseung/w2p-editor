@@ -1,71 +1,377 @@
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 1rem;
-  background: #1f2937;
-  color: #f9fafb;
-  overflow-x: auto;
+/* Defined on :root — rather than .toolbar — because .toolbar-menu-panel
+   renders through a portal into document.body (see Toolbar.tsx) to escape
+   the toolbar's clipping box. A portaled node keeps no CSS relationship to
+   its logical JSX parent, so custom properties (and any ".toolbar ..."
+   descendant selector) scoped to .toolbar would silently fail to reach it. */
+:root {
+  --tb-bg: #17181f;
+  --tb-bg-raised: #1f2129;
+  --tb-bg-hover: #2a2d38;
+  --tb-bg-active: #333747;
+  --tb-border: #2c2f3a;
+  --tb-text: #f3f4f6;
+  --tb-text-muted: #9297a8;
+  --tb-accent: #6366f1;
+  --tb-accent-hover: #4f52d6;
+  --tb-accent-text: #ffffff;
+  --tb-radius: 8px;
 }
+
+.toolbar {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  background: linear-gradient(180deg, var(--tb-bg) 0%, #14151b 100%);
+  border-bottom: 1px solid var(--tb-border);
+  color: var(--tb-text);
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: thin;
+  scrollbar-color: var(--tb-border) transparent;
+}
+
+.toolbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.toolbar::-webkit-scrollbar-thumb {
+  background: var(--tb-border);
+  border-radius: 999px;
+}
+
+/* ---------- Brand ---------- */
 
 .toolbar-brand {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-weight: 700;
-  font-size: 0.95rem;
+  gap: 0.45rem;
   flex-shrink: 0;
-  padding-right: 0.6rem;
-  margin-right: 0.2rem;
-  border-right: 1px solid #374151;
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+  color: var(--tb-text);
+  padding-right: 0.35rem;
+}
+
+.toolbar-brand img {
+  border-radius: 5px;
+}
+
+/* ---------- Structural helpers ---------- */
+
+.toolbar-divider {
+  flex-shrink: 0;
+  width: 1px;
+  align-self: stretch;
+  margin: 0.3rem 0.1rem;
+  background: var(--tb-border);
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 0.5rem;
 }
 
 .toolbar-group {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   flex-shrink: 0;
 }
 
-.toolbar-label {
-  font-size: 0.8rem;
-  color: #d1d5db;
+/* A "segment" bundles related icon-only actions into one visually
+   contiguous, softly-recessed strip (insert tools, undo/redo) instead of
+   scattering same-weight buttons across the bar. */
+.toolbar-segment {
+  gap: 0.15rem;
+  padding: 0.2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--tb-border);
+  border-radius: calc(var(--tb-radius) + 2px);
 }
 
-.toolbar button,
-.toolbar select {
-  font-size: 0.85rem;
-  padding: 0.4rem 0.7rem;
-  border-radius: 6px;
-  border: 1px solid #374151;
-  background: #374151;
-  color: #f9fafb;
+.toolbar-segment-divider {
+  width: 1px;
+  height: 1.3rem;
+  margin: 0 0.15rem;
+  background: var(--tb-border);
+  flex-shrink: 0;
+}
+
+/* ---------- Buttons ---------- */
+
+.toolbar button {
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--tb-text);
+  background: transparent;
+  border: none;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease, opacity 120ms ease, transform 80ms ease;
 }
 
-.toolbar button:hover:not(:disabled) {
-  background: #4b5563;
+.toolbar button:focus-visible {
+  outline: 2px solid var(--tb-accent);
+  outline-offset: 1px;
 }
 
 .toolbar button:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
-.toolbar-primary {
-  background: #2563eb;
-  border-color: #2563eb;
+.toolbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  color: var(--tb-text-muted);
 }
 
-.toolbar-primary:hover:not(:disabled) {
-  background: #1d4ed8;
+.toolbar-icon-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.toolbar-icon-btn:hover:not(:disabled) {
+  background: var(--tb-bg-hover);
+  color: var(--tb-text);
+}
+
+.toolbar-icon-btn:active:not(:disabled) {
+  background: var(--tb-bg-active);
+  transform: scale(0.94);
+}
+
+.toolbar-pill {
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  background: var(--tb-bg-raised);
+  border: 1px solid var(--tb-border);
+  color: var(--tb-text-muted);
+}
+
+.toolbar-pill:hover {
+  background: var(--tb-bg-hover);
+  color: var(--tb-text);
+  border-color: #3a3e4d;
+}
+
+.toolbar-group-pills {
+  gap: 0.4rem;
+}
+
+/* ---------- Preset select ---------- */
+
+.toolbar-group:has(.toolbar-select) {
+  position: relative;
+}
+
+.toolbar-select {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--tb-text);
+  background: var(--tb-bg-raised);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius);
+  padding: 0.4rem 1.8rem 0.4rem 0.7rem;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.toolbar-select:hover {
+  background: var(--tb-bg-hover);
+  border-color: #3a3e4d;
+}
+
+.toolbar-select:focus-visible {
+  outline: 2px solid var(--tb-accent);
+  outline-offset: 1px;
+}
+
+.toolbar-select-caret {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--tb-text-muted);
+}
+
+.toolbar-select-caret svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---------- Primary CTA ---------- */
+
+.toolbar-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.85rem;
+  border-radius: var(--tb-radius);
+  background: var(--tb-accent);
+  color: var(--tb-accent-text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(99, 102, 241, 0.35);
+}
+
+.toolbar-primary svg {
+  width: 14px;
+  height: 14px;
+}
+
+.toolbar-primary:hover {
+  background: var(--tb-accent-hover);
+}
+
+.toolbar-primary:active {
+  transform: scale(0.97);
+}
+
+/* ---------- File dropdown menu ---------- */
+
+.toolbar-menu {
+  position: relative;
+}
+
+.toolbar-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: var(--tb-radius);
+  color: var(--tb-text-muted);
+}
+
+.toolbar-menu-trigger svg:first-child {
+  width: 14px;
+  height: 14px;
+}
+
+.toolbar-menu-trigger:hover,
+.toolbar-menu-trigger.is-open {
+  background: var(--tb-bg-hover);
+  color: var(--tb-text);
+}
+
+.toolbar-menu-chevron {
+  width: 10px !important;
+  height: 10px !important;
+  transition: transform 120ms ease;
+}
+
+.toolbar-menu-trigger.is-open .toolbar-menu-chevron {
+  transform: rotate(180deg);
+}
+
+.toolbar-menu-panel {
+  /* position: fixed with inline top/right (computed from the trigger's
+     bounding rect in Toolbar.tsx) rather than a normal absolute/relative
+     pairing: it's rendered through a portal into document.body so it can
+     escape .toolbar's overflow-x:auto, which — per spec — forces
+     overflow-y to clip too even though it's declared `visible` here, which
+     would otherwise cut the panel off wherever it dropped below the bar. */
+  position: fixed;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 180px;
+  padding: 0.35rem;
+  background: var(--tb-bg-raised);
+  border: 1px solid var(--tb-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+  animation: toolbar-menu-in 130ms ease;
+}
+
+@keyframes toolbar-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Self-contained reset (not ".toolbar button") — the panel is portaled to
+   document.body, so it's no longer a DOM descendant of .toolbar and the
+   generic reset above never reaches it. */
+.toolbar-menu-panel button {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tb-text);
+  font-family: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.toolbar-menu-panel button svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--tb-text-muted);
+}
+
+.toolbar-menu-panel button:hover {
+  background: var(--tb-bg-hover);
+}
+
+.toolbar-menu-panel button:focus-visible {
+  outline: 2px solid var(--tb-accent);
+  outline-offset: -2px;
+}
+
+.toolbar-menu-divider {
+  height: 1px;
+  margin: 0.3rem 0.2rem;
+  background: var(--tb-border);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+  .toolbar-brand span {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {
   .toolbar {
-    gap: 0.5rem;
+    gap: 0.35rem;
     padding: 0.5rem;
+  }
+
+  .toolbar-primary span {
+    display: none;
+  }
+
+  .toolbar-primary {
+    padding: 0.42rem;
+  }
+
+  .toolbar-menu-trigger span {
+    display: none;
   }
 }
