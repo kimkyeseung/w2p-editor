@@ -96,6 +96,13 @@ interface EditorState {
   // on top of each other.
   clipboard: EditorLayer[]
   pasteCount: number
+  // True whenever the document has changed since the last save/load —
+  // driven by pushHistory (every document-mutating action spreads its
+  // result, so `dirty: true` rides along for free) and cleared by
+  // `markSaved` and by `replaceAll` (loading fresh content isn't itself an
+  // unsaved change). Lets the UI warn before a page close/refresh or a
+  // project switch would silently drop unsaved work.
+  dirty: boolean
 
   setPreset: (presetId: string) => void
   addTextLayer: () => void
@@ -195,6 +202,10 @@ interface EditorState {
   removeGuide: (id: string) => void
   clearGuides: () => void
   replaceAll: (layers: EditorLayer[], presetId: string, folders?: LayerFolder[]) => void
+  // Clears `dirty` after a successful save. Save itself lives outside the
+  // store (Canvas.tsx serializes straight from Fabric), so it can't ride
+  // along on a document-mutating action the way `dirty: true` does.
+  markSaved: () => void
   undo: () => void
   redo: () => void
 }
@@ -213,9 +224,10 @@ const snapshotOf = (state: EditorState): HistoryEntry => ({
   presetId: state.presetId,
 })
 
-const pushHistory = (state: EditorState): Pick<EditorState, 'past' | 'future'> => ({
+const pushHistory = (state: EditorState): Pick<EditorState, 'past' | 'future' | 'dirty'> => ({
   past: [...state.past, snapshotOf(state)].slice(-MAX_HISTORY),
   future: [],
+  dirty: true,
 })
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -234,6 +246,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   drawWidth: 4,
   clipboard: [],
   pasteCount: 0,
+  dirty: false,
 
   setPreset: (presetId) => {
     set((state) => ({ ...pushHistory(state), presetId }))
@@ -990,7 +1003,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       presetId,
       selectedId: null,
       selectedIds: [],
+      // Overrides pushHistory's dirty: true — loading fresh content matches
+      // what's on disk/in the API by definition, so it isn't "unsaved".
+      dirty: false,
     }))
+  },
+
+  markSaved: () => {
+    set({ dirty: false })
   },
 
   undo: () => {
@@ -1006,6 +1026,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       presetId: previous.presetId,
       past: past.slice(0, -1),
       future: [{ layers, folders, guides, selectedId, selectedIds, presetId }, ...future].slice(0, MAX_HISTORY),
+      dirty: true,
     })
   },
 
@@ -1022,6 +1043,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       presetId: next.presetId,
       future: future.slice(1),
       past: [...past, { layers, folders, guides, selectedId, selectedIds, presetId }].slice(-MAX_HISTORY),
+      dirty: true,
     })
   },
 }))

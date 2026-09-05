@@ -437,6 +437,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const selectLayers = useEditorStore((s) => s.selectLayers)
   const applyCanvasModification = useEditorStore((s) => s.applyCanvasModification)
   const replaceAll = useEditorStore((s) => s.replaceAll)
+  const markSaved = useEditorStore((s) => s.markSaved)
   const replaceLayersWithImage = useEditorStore((s) => s.replaceLayersWithImage)
   const removeLayers = useEditorStore((s) => s.removeLayers)
   const duplicateLayers = useEditorStore((s) => s.duplicateLayers)
@@ -449,6 +450,17 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const drawMode = useEditorStore((s) => s.drawMode)
   const drawColor = useEditorStore((s) => s.drawColor)
   const drawWidth = useEditorStore((s) => s.drawWidth)
+
+  // "저장" only ever wrote to localStorage — nothing read it back until the
+  // user explicitly clicked "불러오기", so a plain page refresh after saving
+  // looked like the work had vanished. Restore automatically once on mount
+  // instead; the store always starts empty, so there's nothing of the
+  // current session to clobber.
+  useEffect(() => {
+    const project = loadFromLocalStorage()
+    if (project) replaceAll(project.layers, project.presetId, project.folders ?? [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const preset = useMemo(() => getPresetById(presetId), [presetId])
   const bleedPx = mmToPx(preset.bleedMm)
@@ -1296,7 +1308,10 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     },
     saveToLocalStorage: () => {
       const canvas = fabricRef.current
-      if (canvas) saveToLocalStorage(canvas, layers, presetId, folders)
+      if (canvas) {
+        saveToLocalStorage(canvas, layers, presetId, folders)
+        markSaved()
+      }
     },
     loadFromLocalStorage: () => {
       const project = loadFromLocalStorage()

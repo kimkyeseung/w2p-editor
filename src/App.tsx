@@ -48,6 +48,31 @@ function App() {
   const replaceAll = useEditorStore((s) => s.replaceAll)
   const drawMode = useEditorStore((s) => s.drawMode)
   const setDrawMode = useEditorStore((s) => s.setDrawMode)
+  const dirty = useEditorStore((s) => s.dirty)
+  // Mirrored into a ref rather than read directly in the effect below so the
+  // native `beforeunload` listener is registered exactly once instead of
+  // being torn down and re-added on every edit.
+  const dirtyRef = useRef(dirty)
+
+  useEffect(() => {
+    dirtyRef.current = dirty
+  }, [dirty])
+
+  // A custom-styled "저장하시겠습니까?" dialog can't intercept an actual tab
+  // close/refresh/URL-bar navigation — every modern browser strips custom
+  // text and UI from this specific prompt (a security measure against sites
+  // trapping users), showing only its own generic "changes may not be
+  // saved" confirmation. Setting returnValue is what triggers it; the
+  // string itself is ignored.
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
