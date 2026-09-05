@@ -1,4 +1,4 @@
-interface IconProps {
+export interface IconProps {
   className?: string
 }
 
@@ -366,6 +366,17 @@ export function CloudIcon({ className }: IconProps) {
         strokeWidth="1.3"
         strokeLinejoin="round"
       />
+    </svg>
+  )
+}
+
+export function LayoutGridIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="2" y="2" width="5.2" height="5.2" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="8.8" y="2" width="5.2" height="5.2" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="2" y="8.8" width="5.2" height="5.2" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="8.8" y="8.8" width="5.2" height="5.2" rx="1" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   )
 }

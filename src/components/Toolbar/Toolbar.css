@@ -149,24 +149,6 @@
   transform: scale(0.94);
 }
 
-.toolbar-pill {
-  padding: 0.38rem 0.7rem;
-  border-radius: 999px;
-  background: var(--tb-bg-raised);
-  border: 1px solid var(--tb-border);
-  color: var(--tb-text-muted);
-}
-
-.toolbar-pill:hover {
-  background: var(--tb-bg-hover);
-  color: var(--tb-text);
-  border-color: #3a3e4d;
-}
-
-.toolbar-group-pills {
-  gap: 0.4rem;
-}
-
 /* ---------- Preset select ---------- */
 
 .toolbar-group:has(.toolbar-select) {

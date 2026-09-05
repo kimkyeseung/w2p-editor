@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
-import { createPortal } from 'react-dom'
+import { useRef, type RefObject } from 'react'
 import { useEditorStore } from '../../store/editorStore'
 import { CANVAS_PRESETS } from '../../utils/presets'
 import { readImageFile } from '../../utils/canvasSerialization'
@@ -14,6 +13,7 @@ import {
   FolderMenuIcon,
   FolderOpenIcon,
   ImageIcon,
+  LayoutGridIcon,
   LineShapeIcon,
   MockupIcon,
   RectangleShapeIcon,
@@ -23,6 +23,7 @@ import {
   TriangleShapeIcon,
   UndoIcon,
 } from '../common/icons'
+import { DropdownMenu } from './DropdownMenu'
 import type { CanvasHandle } from '../Canvas/Canvas'
 import type { ShapeKind } from '../../types/editor'
 import './Toolbar.css'
@@ -46,14 +47,6 @@ interface ToolbarProps {
 export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onToast }: ToolbarProps) {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const projectInputRef = useRef<HTMLInputElement>(null)
-  const fileMenuTriggerRef = useRef<HTMLButtonElement>(null)
-  const fileMenuPanelRef = useRef<HTMLDivElement>(null)
-  const [fileMenuOpen, setFileMenuOpen] = useState(false)
-  // The panel renders through a portal (see below) so it can escape the
-  // toolbar's clipping box, so its screen position has to be computed from
-  // the trigger button rather than expressed as ordinary relative/absolute
-  // CSS.
-  const [fileMenuPos, setFileMenuPos] = useState({ top: 0, right: 0 })
 
   const presetId = useEditorStore((s) => s.presetId)
   const setPreset = useEditorStore((s) => s.setPreset)
@@ -65,46 +58,6 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
   const redo = useEditorStore((s) => s.redo)
   const canUndo = useEditorStore((s) => s.past.length > 0)
   const canRedo = useEditorStore((s) => s.future.length > 0)
-
-  // Closes the "파일" menu on an outside click, Escape, or the toolbar's own
-  // horizontal scroll/resize (which would otherwise leave the portal-rendered
-  // panel floating over the wrong spot), matching the usual dropdown
-  // convention so it never lingers open over the canvas.
-  useEffect(() => {
-    if (!fileMenuOpen) return
-    const isOutside = (target: Node) =>
-      !fileMenuTriggerRef.current?.contains(target) && !fileMenuPanelRef.current?.contains(target)
-    const handlePointerDown = (e: PointerEvent) => {
-      if (isOutside(e.target as Node)) setFileMenuOpen(false)
-    }
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFileMenuOpen(false)
-    }
-    const handleReflow = () => setFileMenuOpen(false)
-    window.addEventListener('pointerdown', handlePointerDown)
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('resize', handleReflow)
-    window.addEventListener('scroll', handleReflow, true)
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown)
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('resize', handleReflow)
-      window.removeEventListener('scroll', handleReflow, true)
-    }
-  }, [fileMenuOpen])
-
-  const toggleFileMenu = () => {
-    if (!fileMenuOpen && fileMenuTriggerRef.current) {
-      const rect = fileMenuTriggerRef.current.getBoundingClientRect()
-      setFileMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
-    }
-    setFileMenuOpen((open) => !open)
-  }
-
-  const runFileAction = (action: () => void) => {
-    action()
-    setFileMenuOpen(false)
-  }
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -163,21 +116,26 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
         </div>
       </div>
 
-      <div className="toolbar-group toolbar-group-pills">
-        {SAMPLE_PROJECTS.map((sample) => (
-          <button
-            key={sample.id}
-            type="button"
-            className="toolbar-pill"
-            onClick={() => {
-              replaceAll(sample.layers, sample.presetId)
-              onToast(`${sample.label} 불러왔습니다.`)
-            }}
-          >
-            {sample.label}
-          </button>
-        ))}
-      </div>
+      <DropdownMenu label="샘플" icon={LayoutGridIcon}>
+        {(close) => (
+          <>
+            {SAMPLE_PROJECTS.map((sample) => (
+              <button
+                key={sample.id}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  replaceAll(sample.layers, sample.presetId)
+                  onToast(`${sample.label} 불러왔습니다.`)
+                  close()
+                }}
+              >
+                <span>{sample.label}</span>
+              </button>
+            ))}
+          </>
+        )}
+      </DropdownMenu>
 
       <div className="toolbar-divider" />
 
@@ -234,79 +192,60 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
       <div className="toolbar-spacer" />
 
       <div className="toolbar-group">
-        <div className="toolbar-menu">
-          <button
-            ref={fileMenuTriggerRef}
-            type="button"
-            className={`toolbar-menu-trigger ${fileMenuOpen ? 'is-open' : ''}`}
-            onClick={toggleFileMenu}
-            aria-haspopup="true"
-            aria-expanded={fileMenuOpen}
-          >
-            <FolderMenuIcon />
-            <span>파일</span>
-            <ChevronDownIcon className="toolbar-menu-chevron" />
-          </button>
-          {fileMenuOpen &&
-            createPortal(
-              <div
-                ref={fileMenuPanelRef}
-                className="toolbar-menu-panel"
-                role="menu"
-                style={{ top: fileMenuPos.top, right: fileMenuPos.right }}
+        <DropdownMenu label="파일" icon={FolderMenuIcon}>
+          {(close) => (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  canvasHandleRef.current?.saveToLocalStorage()
+                  onToast('저장되었습니다.')
+                  close()
+                }}
               >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() =>
-                    runFileAction(() => {
-                      canvasHandleRef.current?.saveToLocalStorage()
-                      onToast('저장되었습니다.')
-                    })
-                  }
-                >
-                  <SaveIcon />
-                  <span>저장</span>
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() =>
-                    runFileAction(() => {
-                      const loaded = canvasHandleRef.current?.loadFromLocalStorage()
-                      onToast(loaded ? '불러왔습니다.' : '저장된 프로젝트가 없습니다.')
-                    })
-                  }
-                >
-                  <FolderOpenIcon />
-                  <span>불러오기</span>
-                </button>
-                <div className="toolbar-menu-divider" />
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() =>
-                    runFileAction(() => {
-                      canvasHandleRef.current?.exportProjectFile()
-                      onToast('파일로 내보냈습니다.')
-                    })
-                  }
-                >
-                  <FileExportIcon />
-                  <span>파일로 내보내기</span>
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => runFileAction(() => projectInputRef.current?.click())}
-                >
-                  <FileImportIcon />
-                  <span>파일 불러오기</span>
-                </button>
-              </div>,
-              document.body,
-            )}
-        </div>
+                <SaveIcon />
+                <span>저장</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  const loaded = canvasHandleRef.current?.loadFromLocalStorage()
+                  onToast(loaded ? '불러왔습니다.' : '저장된 프로젝트가 없습니다.')
+                  close()
+                }}
+              >
+                <FolderOpenIcon />
+                <span>불러오기</span>
+              </button>
+              <div className="toolbar-menu-divider" />
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  canvasHandleRef.current?.exportProjectFile()
+                  onToast('파일로 내보냈습니다.')
+                  close()
+                }}
+              >
+                <FileExportIcon />
+                <span>파일로 내보내기</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  projectInputRef.current?.click()
+                  close()
+                }}
+              >
+                <FileImportIcon />
+                <span>파일 불러오기</span>
+              </button>
+            </>
+          )}
+        </DropdownMenu>
         <input
           ref={projectInputRef}
           type="file"
