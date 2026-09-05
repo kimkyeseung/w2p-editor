@@ -87,6 +87,15 @@ interface EditorState {
   drawMode: DrawMode
   drawColor: string
   drawWidth: number
+  // In-app clipboard for Ctrl/Cmd+C / Ctrl/Cmd+V — holds the copied layers'
+  // data so paste can be repeated after selecting something else. Session
+  // state rather than document content (same reasoning as `lastTransform`),
+  // so it's excluded from undo history and not persisted. `pasteCount`
+  // tracks how many times the current clipboard has been pasted so repeated
+  // pastes step further away from the original instead of stacking exactly
+  // on top of each other.
+  clipboard: EditorLayer[]
+  pasteCount: number
 
   setPreset: (presetId: string) => void
   addTextLayer: () => void
@@ -131,6 +140,12 @@ interface EditorState {
   removeLayers: (ids: string[]) => void
   duplicateLayer: (id: string) => void
   duplicateLayers: (ids: string[]) => void
+  // Ctrl/Cmd+C: snapshots the given layers into `clipboard`. Doesn't touch
+  // undo history — copying isn't a document edit.
+  copyLayers: (ids: string[]) => void
+  // Ctrl/Cmd+V: inserts fresh clones of whatever is in `clipboard`, offset
+  // further each repeated call. No-op with an empty clipboard.
+  pasteLayers: () => void
   // Flatten/merge: swaps every given layer for one new rasterized image
   // layer in a single step (Canvas.tsx does the actual rendering — this
   // just commits the result). Inserted where the topmost merged layer sat,
@@ -217,6 +232,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   drawMode: 'none',
   drawColor: '#111827',
   drawWidth: 4,
+  clipboard: [],
+  pasteCount: 0,
 
   setPreset: (presetId) => {
     set((state) => ({ ...pushHistory(state), presetId }))
@@ -571,6 +588,42 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         layers,
         selectedId: newIds.length === 1 ? newIds[0] : null,
         selectedIds: newIds,
+      }
+    })
+  },
+
+  copyLayers: (ids) => {
+    if (ids.length === 0) return
+    set((state) => {
+      const idSet = new Set(ids)
+      const clipboard = state.layers.filter((layer) => idSet.has(layer.id))
+      if (clipboard.length === 0) return state
+      return { clipboard, pasteCount: 0 }
+    })
+  },
+
+  pasteLayers: () => {
+    set((state) => {
+      if (state.clipboard.length === 0) return state
+      const offset = 16 * (state.pasteCount + 1)
+      const newIds: string[] = []
+      const clones = state.clipboard.map((source) => {
+        const newId = createId()
+        newIds.push(newId)
+        return {
+          ...source,
+          id: newId,
+          name: `${source.name} 사본`,
+          x: source.x + offset,
+          y: source.y + offset,
+        }
+      })
+      return {
+        ...pushHistory(state),
+        layers: [...state.layers, ...clones],
+        selectedId: newIds.length === 1 ? newIds[0] : null,
+        selectedIds: newIds,
+        pasteCount: state.pasteCount + 1,
       }
     })
   },

@@ -39,6 +39,8 @@ function App() {
   const redo = useEditorStore((s) => s.redo)
   const removeLayers = useEditorStore((s) => s.removeLayers)
   const repeatLastTransform = useEditorStore((s) => s.repeatLastTransform)
+  const copyLayers = useEditorStore((s) => s.copyLayers)
+  const pasteLayers = useEditorStore((s) => s.pasteLayers)
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const layers = useEditorStore((s) => s.layers)
   const folders = useEditorStore((s) => s.folders)
@@ -72,11 +74,39 @@ function App() {
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
         e.preventDefault()
         removeLayers(selectedIds)
+        return
+      }
+      if (meta && e.key.toLowerCase() === 'c') {
+        if (selectedIds.length === 0) return
+        e.preventDefault()
+        copyLayers(selectedIds)
+        return
+      }
+      if (meta && e.key.toLowerCase() === 'x') {
+        if (selectedIds.length === 0) return
+        e.preventDefault()
+        copyLayers(selectedIds)
+        removeLayers(selectedIds)
+        return
+      }
+      if (meta && e.key.toLowerCase() === 'v') {
+        e.preventDefault()
+        pasteLayers()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo, removeLayers, repeatLastTransform, selectedIds, drawMode, setDrawMode])
+  }, [
+    undo,
+    redo,
+    removeLayers,
+    repeatLastTransform,
+    copyLayers,
+    pasteLayers,
+    selectedIds,
+    drawMode,
+    setDrawMode,
+  ])
 
   const handleOpenMockup = () => {
     const dataUrl = canvasHandleRef.current?.getDesignDataUrl()
