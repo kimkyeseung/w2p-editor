@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type {
   EditorLayer,
   ImageLayer,
+  LayerBorder,
   LayerFolder,
   LayerShadow,
   ShapeKind,
@@ -46,6 +47,7 @@ interface EditorState {
     transform: Partial<Pick<EditorLayer, 'x' | 'y' | 'width' | 'height' | 'rotation' | 'opacity'>>,
   ) => void
   updateLayerShadow: (id: string, shadow: Partial<LayerShadow>) => void
+  updateLayerBorder: (id: string, border: Partial<LayerBorder>) => void
   updateTextStyle: (id: string, style: Partial<Omit<TextLayer, keyof EditorLayer | 'type'>>) => void
   updateShapeStyle: (id: string, style: Partial<Omit<ShapeLayer, keyof EditorLayer | 'type' | 'shape'>>) => void
   // Fabric fires one `object:modified` event for both a transform drag AND
@@ -131,6 +133,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       rotation: 0,
       opacity: 1,
       shadow: { enabled: false, color: '#000000', blur: 10, offsetX: 5, offsetY: 5 },
+      border: { enabled: false, color: '#000000', width: 2 },
       text: '텍스트를 입력하세요',
       fontFamily: 'Noto Sans KR',
       fontSize: 24,
@@ -164,6 +167,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       rotation: 0,
       opacity: 1,
       shadow: { enabled: false, color: '#000000', blur: 10, offsetX: 5, offsetY: 5 },
+      border: { enabled: false, color: '#000000', width: 2 },
       src,
     }
     set((state) => ({
@@ -203,6 +207,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       rotation: 0,
       opacity: 1,
       shadow: { enabled: false, color: '#000000', blur: 10, offsetX: 5, offsetY: 5 },
+      border: { enabled: false, color: '#000000', width: 2 },
       fill: '#e5e7eb',
       stroke: '#111827',
       strokeWidth: 2,
@@ -229,6 +234,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushHistory(state),
       layers: state.layers.map((layer) =>
         layer.id === id ? { ...layer, shadow: { ...layer.shadow, ...shadow } } : layer,
+      ),
+    }))
+  },
+
+  updateLayerBorder: (id, border) => {
+    set((state) => ({
+      ...pushHistory(state),
+      layers: state.layers.map((layer) =>
+        layer.id === id ? { ...layer, border: { ...layer.border, ...border } } : layer,
       ),
     }))
   },

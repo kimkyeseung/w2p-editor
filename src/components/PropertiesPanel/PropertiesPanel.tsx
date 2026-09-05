@@ -20,6 +20,7 @@ export function PropertiesPanel() {
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const updateLayerTransform = useEditorStore((s) => s.updateLayerTransform)
   const updateLayerShadow = useEditorStore((s) => s.updateLayerShadow)
+  const updateLayerBorder = useEditorStore((s) => s.updateLayerBorder)
   const updateTextStyle = useEditorStore((s) => s.updateTextStyle)
   const updateShapeStyle = useEditorStore((s) => s.updateShapeStyle)
   const renameLayer = useEditorStore((s) => s.renameLayer)
@@ -155,6 +156,36 @@ export function PropertiesPanel() {
           </>
         )}
       </div>
+
+      {!shapeLayer && (
+        <div className="prop-section">
+          <label className="prop-field prop-field-checkbox">
+            <input
+              type="checkbox"
+              checked={layer.border.enabled}
+              onChange={(e) => updateLayerBorder(layer.id, { enabled: e.target.checked })}
+            />
+            <span>테두리</span>
+          </label>
+          {layer.border.enabled && (
+            <>
+              <label className="prop-field">
+                <span>테두리 색상</span>
+                <input
+                  type="color"
+                  value={layer.border.color}
+                  onChange={(e) => updateLayerBorder(layer.id, { color: e.target.value })}
+                />
+              </label>
+              <NumberField
+                label="테두리 굵기"
+                value={layer.border.width}
+                onCommit={(v) => updateLayerBorder(layer.id, { width: Math.max(0, v) })}
+              />
+            </>
+          )}
+        </div>
+      )}
 
       {textLayer && (
         <div className="prop-section">

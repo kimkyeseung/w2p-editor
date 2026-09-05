@@ -3,7 +3,15 @@ import * as fabric from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
 import { ROTATE_CURSOR } from '../../utils/cursors'
-import type { EditorLayer, ImageLayer, LayerFolder, LayerShadow, ShapeLayer, TextLayer } from '../../types/editor'
+import type {
+  EditorLayer,
+  ImageLayer,
+  LayerBorder,
+  LayerFolder,
+  LayerShadow,
+  ShapeLayer,
+  TextLayer,
+} from '../../types/editor'
 import {
   exportCanvasAsPng,
   importProjectFile,
@@ -42,6 +50,15 @@ const buildShadow = (shadow: LayerShadow): fabric.Shadow | null =>
         offsetY: shadow.offsetY,
       })
     : null
+
+// Only meaningful for text/image layers — shape layers already own
+// stroke/strokeWidth via ShapeLayer.stroke and apply it themselves in
+// applyShapeStyle/createShapeObject, so applying this too would fight over
+// Fabric's single stroke/strokeWidth properties on the same object.
+const buildBorderProps = (border: LayerBorder) => ({
+  stroke: border.enabled ? border.color : '',
+  strokeWidth: border.enabled ? border.width : 0,
+})
 
 const topLeftFromObject = (obj: fabric.FabricObject) => {
   const center = obj.getCenterPoint()
@@ -83,6 +100,7 @@ const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer, fold
     visible,
     opacity: layer.opacity,
     shadow: buildShadow(layer.shadow),
+    ...(layer.type === 'shape' ? {} : buildBorderProps(layer.border)),
     selectable: !locked && visible,
     evented: !locked && visible,
   })
@@ -140,6 +158,7 @@ const createTextObject = (layer: TextLayer, folders: LayerFolder[]): fabric.Text
     angle: layer.rotation,
     opacity: layer.opacity,
     shadow: buildShadow(layer.shadow),
+    ...buildBorderProps(layer.border),
     visible,
     selectable: !locked && visible,
     evented: !locked && visible,

@@ -11,6 +11,15 @@ export interface LayerShadow {
   offsetY: number
 }
 
+// Only rendered for text/image layers — shape layers already expose their
+// own outline via `stroke`/`strokeWidth` on ShapeLayer, so applying this too
+// would fight over Fabric's single stroke/strokeWidth object properties.
+export interface LayerBorder {
+  enabled: boolean
+  color: string
+  width: number
+}
+
 export interface LayerBase {
   id: string
   type: LayerType
@@ -25,6 +34,7 @@ export interface LayerBase {
   // 0-1, applies to every layer type (Fabric's own opacity range).
   opacity: number
   shadow: LayerShadow
+  border: LayerBorder
   // Layers sharing a folderId are kept contiguous in the layers array (that
   // contiguous run *is* the folder's position in z-order) — a folder has no
   // z-order slot of its own, it's purely a layer-panel grouping concept.
