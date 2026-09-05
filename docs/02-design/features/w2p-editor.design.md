@@ -11,7 +11,7 @@ version: 1.2
 > **Version**: 0.1.0
 > **Author**: chickenboys
 > **Date**: 2026-08-24
-> **Status**: Draft
+> **Status**: Completed — 핵심 아키텍처는 유지된 채 이후에도 기능이 계속 확장됨 ([README.md](../../../README.md) 참고)
 > **Planning Doc**: [w2p-editor.plan.md](../../01-plan/features/w2p-editor.plan.md)
 
 > 백엔드/DB/인증이 없는 정적 SPA이므로 원본 템플릿의 API 명세, DB 스키마, 보안 섹션은 N/A 처리하고 캔버스 아키텍처·상태 모델·컴포넌트 설계에 집중한다.
@@ -162,6 +162,8 @@ export interface EditorSnapshot {
 [EditorSnapshot] N ──── 1 [History Stack] (undo/redo용 과거/미래 스냅샷 배열)
 ```
 
+> 위 타입은 최초 설계 당시(MVP) 스냅샷이며, 이후 도형/경로 레이어·폴더·클리핑 마스크·가이드 등이 추가되며 계속 확장되었다. 현재 정확한 정의는 [src/types/editor.ts](../../../src/types/editor.ts)를 참고.
+
 ### 3.3 Persistence (localStorage / File, DB 아님)
 
 ```typescript
@@ -181,12 +183,8 @@ interface PersistedProject {
 
 ## 4. API Specification
 
-MVP 범위에는 REST/GraphQL 연동이 없음 (N/A). 스트레치 FR-13(더미 REST API 연동 데모)에서만 아래를 사용한다.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/projects` | json-server 목데이터 — 저장된 디자인 프로젝트 목록 조회 |
-| POST | `/projects` | 현재 캔버스 JSON을 새 프로젝트로 저장 |
+MVP 설계 당시엔 REST 연동이 없었다 (N/A). 실제로는 스트레치 단계에서 json-server 대신 Vercel Functions + Blob으로
+`api/projects`(GET/POST/DELETE)를 구현했다 — 상세는 README의 "API/저장소 설계 노트" 참고.
 
 ---
 
@@ -258,29 +256,17 @@ MVP는 서버 통신이 없어 HTTP 에러 코드 체계는 N/A. 대신 클라�
 
 ## 7. Security Considerations
 
-- [x] 입력 검증: 이미지 업로드 MIME 타입 체크 정도만 (서버 없음, XSS/SQLi 벡터 최소)
-- [ ] 인증/인가 — N/A (백엔드 없음)
-- [ ] 민감정보 암호화 — N/A
-- [ ] HTTPS 강제 — 배포 플랫폼(Vercel 등)이 기본 제공
-- [ ] Rate Limiting — N/A
+서버/인증/DB가 없는 정적 SPA라 대부분 N/A. 실질적인 유일한 입력 검증은 이미지 업로드 시
+`accept="image/*"` + MIME 체크 정도이고, HTTPS는 배포 플랫폼(Vercel)이 기본 제공한다.
 
 ---
 
 ## 8. Test Plan
 
-시간 제약상 자동화 테스트는 스트레치 이후로 미루고, MVP는 수동 QA 체크리스트로 검증한다.
-
-### 8.1 수동 QA 체크리스트 (Definition of Done과 매핑)
-
-- [ ] 프리셋 변경 시 캔버스 크기/bleed/safe area가 즉시 갱신된다
-- [ ] 텍스트 추가 → 폰트/크기/색상/정렬 변경이 캔버스에 반영된다
-- [ ] 이미지 업로드 → 드래그/리사이즈/회전이 정상 동작한다
-- [ ] 레이어 패널의 순서변경/잠금/삭제/복제가 캔버스와 동기화된다
-- [ ] 속성 패널 숫자 입력이 캔버스 객체를 정확히 이동/리사이즈/회전시킨다
-- [ ] Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z가 정상 동작한다
-- [ ] 저장 후 새로고침/불러오기로 동일한 디자인이 복원된다
-- [ ] PNG 내보내기 결과물이 실제 디자인과 일치한다
-- [ ] 모바일 뷰포트(또는 터치 에뮬레이션)에서 드래그/핀치줌이 동작한다
+초기(MVP)엔 수동 브라우저 QA로만 검증했고, 이후 스토어 로직(정렬/분포, undo/redo, 클리핑 마스크,
+레이어 병합 등)이 복잡해지면서 `src/store/editorStore.test.ts` / `canvasHelpers.test.ts`에 Vitest
+유닛 테스트를 추가했다. UI 동작 자체는 여전히 실제 브라우저(Claude Browser)로 클릭/드래그까지
+재현해 검증하는 방식을 유지한다.
 
 ---
 
@@ -308,104 +294,9 @@ Rule: Presentation은 Fabric 인스턴스를 Canvas 컴포넌트 밖으로 노�
 
 ---
 
-## 10. Coding Convention Reference
-
-### 10.1 Naming Conventions
-
-| Target | Rule | Example |
-|--------|------|---------|
-| Components | PascalCase | `Canvas`, `LayerPanel`, `PropertiesPanel` |
-| Store actions | camelCase 동사형 | `addTextLayer`, `updateLayerTransform`, `undo`, `redo` |
-| Types | PascalCase | `EditorLayer`, `CanvasPreset` |
-| Files (component) | PascalCase.tsx (폴더당 index.tsx) | `Canvas/Canvas.tsx` |
-| Files (utility/store) | camelCase.ts | `editorStore.ts`, `canvasSerialization.ts` |
-
-### 10.2 Import Order
-
-```typescript
-// 1. External libraries
-import { useEffect, useRef } from 'react'
-import * as fabric from 'fabric'
-
-// 2. Internal absolute/relative imports
-import { useEditorStore } from '@/store/editorStore'
-
-// 3. Type imports
-import type { EditorLayer } from '@/types/editor'
-
-// 4. Styles
-import './Canvas.css'
-```
-
-### 10.3 This Feature's Conventions
-
-| Item | Convention Applied |
-|------|-------------------|
-| State management | Zustand 단일 스토어(`editorStore`), `layers`/`selectedId`/`past`/`future` 필드로 히스토리 관리 |
-| Fabric↔Store 동기화 | `Canvas` 컴포넌트 내부에서만 Fabric 이벤트 구독, 액션 호출로 스토어에 반영 |
-| 에러 처리 | try/catch + 최소한의 사용자 피드백(alert), 별도 에러 바운더리는 과함 |
-
----
-
-## 11. Implementation Guide
-
-### 11.1 File Structure
-
-```
-w2p (repo root, "web/" 하위 디렉토리 없이 바로 여기)
-├── index.html
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-├── public/
-│   └── mockups/            (스트레치: 목업 이미지)
-└── src/
-    ├── main.tsx
-    ├── App.tsx
-    ├── App.css
-    ├── components/
-    │   ├── Canvas/
-    │   │   ├── Canvas.tsx
-    │   │   └── Canvas.css
-    │   ├── Toolbar/
-    │   │   ├── Toolbar.tsx
-    │   │   └── Toolbar.css
-    │   ├── LayerPanel/
-    │   │   ├── LayerPanel.tsx
-    │   │   └── LayerPanel.css
-    │   └── PropertiesPanel/
-    │       ├── PropertiesPanel.tsx
-    │       └── PropertiesPanel.css
-    ├── store/
-    │   └── editorStore.ts
-    ├── types/
-    │   └── editor.ts
-    └── utils/
-        ├── canvasSerialization.ts
-        └── presets.ts        (mm → px 변환 포함 프리셋 상수)
-```
-
-### 11.2 Implementation Order (MVP 1~9 매핑)
-
-1. [ ] Vite React-TS 프로젝트를 저장소 루트에 초기화, `fabric`/`zustand` 설치
-2. [ ] `types/editor.ts` — `EditorLayer`, `CanvasPreset` 등 타입 정의
-3. [ ] `utils/presets.ts` — 명함(90x50mm)/A4 포스터 프리셋 + mm→px 변환 + bleed/safe area 계산
-4. [ ] `store/editorStore.ts` — layers/selectedId/activePreset + history(past/future) + 액션(add/update/remove/duplicate/reorder/undo/redo)
-5. [ ] `components/Canvas/Canvas.tsx` — Fabric 캔버스 초기화, 프리셋 크기 반영, bleed/safe area 가이드라인 렌더, Fabric 이벤트 → 스토어 액션 브릿지 (MVP 1)
-6. [ ] 텍스트 레이어 추가 + `PropertiesPanel`의 폰트/크기/색상/정렬 편집 (MVP 2)
-7. [ ] 이미지 업로드 + Fabric transform(이동/리사이즈/회전) (MVP 3)
-8. [ ] `components/LayerPanel/LayerPanel.tsx` — 목록/순서/잠금/삭제/복제 (MVP 4)
-9. [ ] `PropertiesPanel`에 x/y/w/h/rotation 숫자 입력 + 정렬 버튼 추가 (MVP 5)
-10. [ ] Undo/Redo 스토어 로직 + 키보드 단축키 바인딩 (MVP 6)
-11. [ ] `utils/canvasSerialization.ts` — `toJSON`/`loadFromJSON` 기반 저장/불러오기 (localStorage + 파일 다운로드) (MVP 7)
-12. [ ] PNG 내보내기 (`canvas.toDataURL()`) (MVP 8)
-13. [ ] 반응형 CSS + 터치/핀치 줌 대응, 모바일 레이아웃(탭 전환) (MVP 9)
-14. [ ] README 작성 (실행 방법 + 공고 요구사항 대응표) + 배포
-
----
-
 ## Version History
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 0.1 | 2026-08-24 | 최초 작성 | chickenboys |
+| 0.2 | 2026-09-06 | MVP 이후 계속 유효한 아키텍처 원칙(단방향 상태 흐름, 이벤트 게이트웨이 단일화, 좌표 변환)은 유지하고, 완료 시점에 이미 다 체크된 구현 순서·범용 코딩 컨벤션·구현 당시 파일 구조 등 실제 코드가 훨씬 정확한 출처인 섹션은 정리 — 최신 프로젝트 구조/기능은 [README.md](../../../README.md) 참고 | Claude Code |
