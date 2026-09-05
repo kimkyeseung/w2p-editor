@@ -93,6 +93,14 @@ interface EditorState {
   toggleVisible: (id: string) => void
   reorderLayer: (id: string, direction: 'front' | 'back' | 'forward' | 'backward') => void
   alignLayer: (id: string, alignment: 'left' | 'center-x' | 'right' | 'top' | 'center-y' | 'bottom') => void
+  // Illustrator-style "align to selection" (as opposed to alignLayer's
+  // align-to-canvas): positions every given layer relative to the
+  // combined bounding box of the whole set, not the artboard.
+  alignLayers: (ids: string[], alignment: 'left' | 'center-x' | 'right' | 'top' | 'center-y' | 'bottom') => void
+  // Equalizes the gaps between adjacent layers' bounding boxes along one
+  // axis, keeping the first and last (by position) fixed — needs 3+ layers
+  // to mean anything, since 2 layers have only a single gap to equalize.
+  distributeLayers: (ids: string[], axis: 'horizontal' | 'vertical') => void
   selectLayer: (id: string | null) => void
   selectLayers: (ids: string[]) => void
   toggleSelectLayer: (id: string) => void
@@ -464,6 +472,67 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return {
         ...pushHistory(state),
         layers: state.layers.map((l) => (l.id === id ? { ...l, x, y } : l)),
+      }
+    })
+  },
+
+  alignLayers: (ids, alignment) => {
+    if (ids.length < 2) return
+    set((state) => {
+      const idSet = new Set(ids)
+      const selected = state.layers.filter((l) => idSet.has(l.id))
+      if (selected.length < 2) return state
+
+      const minX = Math.min(...selected.map((l) => l.x))
+      const maxRight = Math.max(...selected.map((l) => l.x + l.width))
+      const minY = Math.min(...selected.map((l) => l.y))
+      const maxBottom = Math.max(...selected.map((l) => l.y + l.height))
+
+      return {
+        ...pushHistory(state),
+        layers: state.layers.map((l) => {
+          if (!idSet.has(l.id)) return l
+          let { x, y } = l
+          if (alignment === 'left') x = minX
+          else if (alignment === 'center-x') x = (minX + maxRight) / 2 - l.width / 2
+          else if (alignment === 'right') x = maxRight - l.width
+          else if (alignment === 'top') y = minY
+          else if (alignment === 'center-y') y = (minY + maxBottom) / 2 - l.height / 2
+          else if (alignment === 'bottom') y = maxBottom - l.height
+          return { ...l, x, y }
+        }),
+      }
+    })
+  },
+
+  distributeLayers: (ids, axis) => {
+    if (ids.length < 3) return
+    set((state) => {
+      const idSet = new Set(ids)
+      const selected = state.layers.filter((l) => idSet.has(l.id))
+      if (selected.length < 3) return state
+
+      const posKey = axis === 'horizontal' ? 'x' : 'y'
+      const sizeKey = axis === 'horizontal' ? 'width' : 'height'
+      const sorted = [...selected].sort((a, b) => a[posKey] - b[posKey])
+      const first = sorted[0]
+      const last = sorted[sorted.length - 1]
+      const totalSize = sorted.reduce((sum, l) => sum + l[sizeKey], 0)
+      const span = last[posKey] + last[sizeKey] - first[posKey]
+      const gap = (span - totalSize) / (sorted.length - 1)
+
+      const nextPos = new Map<string, number>()
+      let cursor = first[posKey]
+      sorted.forEach((l) => {
+        nextPos.set(l.id, cursor)
+        cursor += l[sizeKey] + gap
+      })
+
+      return {
+        ...pushHistory(state),
+        layers: state.layers.map((l) =>
+          nextPos.has(l.id) ? { ...l, [posKey]: nextPos.get(l.id)! } : l,
+        ),
       }
     })
   },

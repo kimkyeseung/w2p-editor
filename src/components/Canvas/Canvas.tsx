@@ -217,6 +217,16 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const fabricRef = useRef<fabric.Canvas | null>(null)
   const idToObject = useRef(new Map<string, fabric.FabricObject>())
   const objectToId = useRef(new WeakMap<fabric.FabricObject, string>())
+  // Snapshot of each layer's x/y as of the last reconciliation pass — used
+  // only to detect "a currently-grouped object's stored position just
+  // changed" (see the reconciliation effect below). Deliberately a plain
+  // diff against our own last-seen values rather than reading Fabric's own
+  // geometry APIs, which reflect Fabric's internal group-relative<->absolute
+  // conversion and proved unreliable for this specific comparison — using
+  // them here caused spurious mismatches while simply building a
+  // multi-selection (no position had actually changed), which triggered a
+  // discard -> selection:cleared -> store update -> re-render loop.
+  const prevPositionsRef = useRef(new Map<string, { x: number; y: number }>())
   const pendingImageIds = useRef(new Set<string>())
   const pinchStateRef = useRef<{ distance: number; zoom: number } | null>(null)
   const panDragRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number } | null>(null)
@@ -660,6 +670,32 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     const canvas = fabricRef.current
     if (!canvas) return
 
+    // A programmatic multi-object edit (Align/Distribute in the properties
+    // panel) changes several layers' x/y while they're all still one live
+    // Fabric ActiveSelection. applyCommonTransform below skips writing
+    // position for grouped objects (see its comment) because Fabric treats
+    // left/top as group-relative while grouped, not canvas-absolute — so a
+    // blind write would corrupt the transform. That skip is only safe when
+    // the object already sits where the layer says it should (e.g. right
+    // after a drag, whose new position was itself read back from Fabric).
+    // Detect the other case — the store now disagrees with what's on
+    // screen — and discard the group first so the per-object writes below
+    // apply normally; the selection-sync block further down rebuilds the
+    // ActiveSelection from the same `selectedIds` once positions are fixed,
+    // so the multi-select box reappears around the moved objects instead of
+    // silently dropping the selection.
+    const activeObject = canvas.getActiveObject()
+    if (activeObject instanceof fabric.ActiveSelection) {
+      const isStale = activeObject.getObjects().some((obj) => {
+        const id = objectToId.current.get(obj)
+        const layer = id ? layers.find((l) => l.id === id) : undefined
+        const prev = id ? prevPositionsRef.current.get(id) : undefined
+        if (!layer || !prev) return false
+        return layer.x !== prev.x || layer.y !== prev.y
+      })
+      if (isStale) canvas.discardActiveObject()
+    }
+
     const currentIds = new Set(layers.map((l) => l.id))
     for (const [id, obj] of Array.from(idToObject.current.entries())) {
       if (!currentIds.has(id)) {
@@ -744,6 +780,8 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
         }
       }
     }
+
+    prevPositionsRef.current = new Map(layers.map((l) => [l.id, { x: l.x, y: l.y }]))
 
     canvas.requestRenderAll()
   }, [layers, folders, selectedIds])

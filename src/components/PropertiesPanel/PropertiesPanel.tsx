@@ -46,6 +46,8 @@ export function PropertiesPanel() {
   const updateShapeStyle = useEditorStore((s) => s.updateShapeStyle)
   const renameLayer = useEditorStore((s) => s.renameLayer)
   const alignLayer = useEditorStore((s) => s.alignLayer)
+  const alignLayers = useEditorStore((s) => s.alignLayers)
+  const distributeLayers = useEditorStore((s) => s.distributeLayers)
 
   const layer = layers.find((l) => l.id === selectedId)
 
@@ -53,11 +55,47 @@ export function PropertiesPanel() {
     return (
       <div className="properties-panel">
         <h2 className="panel-title">속성</h2>
-        <p className="prop-empty">
-          {selectedIds.length}개 오브젝트가 선택되었습니다.
-          <br />
-          함께 드래그해서 이동하거나, 레이어 패널에서 일괄 복제/삭제할 수 있습니다.
-        </p>
+        <p className="prop-empty">{selectedIds.length}개 오브젝트가 선택되었습니다.</p>
+
+        <div className="prop-section">
+          <span className="prop-section-title">정렬 (선택 항목 기준)</span>
+          <div className="prop-align-grid">
+            <button type="button" onClick={() => alignLayers(selectedIds, 'left')}>
+              좌측
+            </button>
+            <button type="button" onClick={() => alignLayers(selectedIds, 'center-x')}>
+              가로 중앙
+            </button>
+            <button type="button" onClick={() => alignLayers(selectedIds, 'right')}>
+              우측
+            </button>
+            <button type="button" onClick={() => alignLayers(selectedIds, 'top')}>
+              상단
+            </button>
+            <button type="button" onClick={() => alignLayers(selectedIds, 'center-y')}>
+              세로 중앙
+            </button>
+            <button type="button" onClick={() => alignLayers(selectedIds, 'bottom')}>
+              하단
+            </button>
+          </div>
+        </div>
+
+        {selectedIds.length >= 3 && (
+          <div className="prop-section">
+            <span className="prop-section-title">균등 분포</span>
+            <div className="prop-align-grid prop-cols-2">
+              <button type="button" onClick={() => distributeLayers(selectedIds, 'horizontal')}>
+                가로 분포
+              </button>
+              <button type="button" onClick={() => distributeLayers(selectedIds, 'vertical')}>
+                세로 분포
+              </button>
+            </div>
+          </div>
+        )}
+
+        <p className="prop-empty">함께 드래그해서 이동하거나, 레이어 패널에서 일괄 복제/삭제할 수 있습니다.</p>
       </div>
     )
   }

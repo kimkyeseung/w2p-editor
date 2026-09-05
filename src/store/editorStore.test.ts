@@ -226,3 +226,96 @@ describe('undo/redo for the new layer-style actions', () => {
     expect(useEditorStore.getState().layers[0].flipX).toBe(false)
   })
 })
+
+// Adds a rectangle at an explicit x/y/width/height, sidestepping
+// addShapeLayer's fixed (40, 40) default so tests can set up layers at
+// distinct, known positions.
+const addRectAt = (x: number, y: number, width = 100, height = 50) => {
+  useEditorStore.getState().addShapeLayer('rectangle')
+  const layers = useEditorStore.getState().layers
+  const id = layers[layers.length - 1].id
+  useEditorStore.getState().updateLayerTransform(id, { x, y, width, height })
+  return id
+}
+
+const xyOf = (id: string) => {
+  const layer = useEditorStore.getState().layers.find((l) => l.id === id)!
+  return { x: layer.x, y: layer.y }
+}
+
+describe('alignLayers', () => {
+  it('is a no-op with fewer than 2 ids', () => {
+    const id = addRectAt(10, 10)
+    useEditorStore.getState().alignLayers([id], 'left')
+    expect(xyOf(id).x).toBe(10)
+  })
+
+  it('aligns left to the minimum x among the selection, not the canvas', () => {
+    const idA = addRectAt(50, 0)
+    const idB = addRectAt(200, 0)
+    useEditorStore.getState().alignLayers([idA, idB], 'left')
+    expect(xyOf(idA).x).toBe(50)
+    expect(xyOf(idB).x).toBe(50)
+  })
+
+  it('centers horizontally on the selection bounding box', () => {
+    const idA = addRectAt(0, 0, 100, 50) // spans 0-100
+    const idB = addRectAt(300, 0, 100, 50) // spans 300-400 -> bbox center 200
+    useEditorStore.getState().alignLayers([idA, idB], 'center-x')
+    expect(xyOf(idA).x).toBe(150)
+    expect(xyOf(idB).x).toBe(150)
+  })
+
+  it('aligns bottom to the lowest bottom edge among the selection', () => {
+    const idA = addRectAt(0, 0, 100, 50) // bottom edge 50
+    const idB = addRectAt(0, 200, 100, 100) // bottom edge 300
+    useEditorStore.getState().alignLayers([idA, idB], 'bottom')
+    expect(xyOf(idA).y).toBe(250) // 300 - 50
+    expect(xyOf(idB).y).toBe(200) // unchanged, it already set the max
+  })
+})
+
+describe('distributeLayers', () => {
+  it('is a no-op with fewer than 3 ids', () => {
+    const idA = addRectAt(0, 0)
+    const idB = addRectAt(500, 0)
+    useEditorStore.getState().distributeLayers([idA, idB], 'horizontal')
+    expect(xyOf(idA).x).toBe(0)
+    expect(xyOf(idB).x).toBe(500)
+  })
+
+  it('equalizes horizontal gaps between edges, keeping the ends fixed', () => {
+    // Three 100-wide boxes with very uneven spacing (close, then far).
+    const idA = addRectAt(0, 0, 100, 50)
+    const idB = addRectAt(120, 0, 100, 50)
+    const idC = addRectAt(500, 0, 100, 50)
+    useEditorStore.getState().distributeLayers([idA, idB, idC], 'horizontal')
+    const a = xyOf(idA)
+    const b = xyOf(idB)
+    const c = xyOf(idC)
+    expect(a.x).toBe(0)
+    expect(c.x).toBe(500)
+    expect(b.x).toBe(250)
+    expect(b.x - (a.x + 100)).toBe(c.x - (b.x + 100))
+  })
+
+  it('equalizes vertical gaps the same way', () => {
+    const idA = addRectAt(0, 0, 50, 100)
+    const idB = addRectAt(0, 120, 50, 100)
+    const idC = addRectAt(0, 500, 50, 100)
+    useEditorStore.getState().distributeLayers([idA, idB, idC], 'vertical')
+    expect(xyOf(idA).y).toBe(0)
+    expect(xyOf(idC).y).toBe(500)
+    const b = xyOf(idB).y
+    expect(b - (xyOf(idA).y + 100)).toBe(xyOf(idC).y - (b + 100))
+  })
+
+  it('sorts by position first, so passing ids out of spatial order still works', () => {
+    const idA = addRectAt(0, 0, 100, 50)
+    const idB = addRectAt(120, 0, 100, 50)
+    const idC = addRectAt(500, 0, 100, 50)
+    useEditorStore.getState().distributeLayers([idC, idA, idB], 'horizontal')
+    expect(xyOf(idA).x).toBe(0)
+    expect(xyOf(idC).x).toBe(500)
+  })
+})
