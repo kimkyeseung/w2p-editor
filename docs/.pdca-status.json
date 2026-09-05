@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-09-05T19:47:13.870Z",
+  "lastUpdated": "2026-09-05T20:19:26.545Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -64,9 +64,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:45:57.583Z",
-        "lastUpdated": "2026-09-05T19:42:22.224Z"
+        "lastUpdated": "2026-09-05T20:19:26.545Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Canvas/Canvas.tsx"
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Canvas/canvasHelpers.test.ts"
     },
     "Toolbar": {
       "phase": "do",
@@ -194,7 +194,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-05T19:47:13.870Z"
+    "lastActivity": "2026-09-05T20:19:26.545Z"
   },
   "history": [
     {
@@ -2840,6 +2840,54 @@
     {
       "timestamp": "2026-09-05T19:47:13.870Z",
       "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T20:13:48.279Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T20:13:54.486Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T20:18:30.965Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T20:18:39.428Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T20:18:50.716Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T20:18:57.340Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T20:19:15.570Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T20:19:26.545Z",
+      "feature": "Canvas",
       "phase": "do",
       "action": "updated"
     }

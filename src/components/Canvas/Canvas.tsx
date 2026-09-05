@@ -27,6 +27,7 @@ import {
   centerFromTopLeft,
   isLayerLocked,
   isLayerVisible,
+  pathScaleBase,
   unionBoundingBox,
 } from './canvasHelpers'
 import './Canvas.css'
@@ -203,10 +204,10 @@ const createShapeObject = (layer: ShapeLayer, folders: LayerFolder[]): fabric.Ob
 // A path's own `width`/`height` come from its command data's bounding box
 // and never change after the stroke is drawn — so, like an image's natural
 // pixel size, matching the stored layer.width/height is purely a matter of
-// scale, not of touching the path data itself.
+// scale, not of touching the path data itself (see pathScaleBase for why the
+// scale base has to include strokeWidth).
 const applyPathStyle = (obj: fabric.Path, layer: PathLayer, folders: LayerFolder[]) => {
-  const baseWidth = obj.width || 1
-  const baseHeight = obj.height || 1
+  const { baseWidth, baseHeight } = pathScaleBase(obj.width, obj.height, layer.strokeWidth)
   obj.set({
     scaleX: layer.width / baseWidth,
     scaleY: layer.height / baseHeight,
@@ -239,8 +240,7 @@ const createPathObject = (layer: PathLayer, folders: LayerFolder[]): fabric.Path
     selectable: !locked && visible,
     evented: !locked && visible,
   })
-  const baseWidth = obj.width || 1
-  const baseHeight = obj.height || 1
+  const { baseWidth, baseHeight } = pathScaleBase(obj.width, obj.height, layer.strokeWidth)
   obj.set({ scaleX: layer.width / baseWidth, scaleY: layer.height / baseHeight })
   applyRotateCursor(obj)
   return obj

@@ -12,6 +12,22 @@ export const centerFromTopLeft = (layer: Pick<EditorLayer, 'x' | 'y' | 'width' |
   centerY: layer.y + layer.height / 2,
 })
 
+// Fabric folds a non-uniform-stroke object's `strokeWidth` into its
+// *rendered* dimensions — `getScaledWidth()` returns `(width + strokeWidth)
+// * scaleX`, not `width * scaleX` — but the object's own `width`/`height`
+// never include it. A path layer is sized purely via scale (see
+// createPathObject/applyPathStyle in Canvas.tsx), so the scale factor has to
+// be computed against this same stroke-inclusive base; computing it against
+// the bare `objWidth`/`objHeight` instead makes every read-back of the
+// object's on-canvas size (after a resize, e.g.) land slightly larger than
+// what was actually stored, which the next store->canvas sync then bakes in
+// as an even-larger scale — a small, unbounded compounding drift on every
+// round trip through a resize or `object:modified`.
+export const pathScaleBase = (objWidth: number, objHeight: number, strokeWidth: number) => ({
+  baseWidth: (objWidth || 1) + strokeWidth,
+  baseHeight: (objHeight || 1) + strokeWidth,
+})
+
 export const buildShadow = (shadow: LayerShadow): fabric.Shadow | null =>
   shadow.enabled
     ? new fabric.Shadow({
