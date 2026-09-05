@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { EditorLayer, ImageLayer, LayerFolder, TextLayer } from '../types/editor'
+import type { EditorLayer, ImageLayer, LayerFolder, ShapeKind, ShapeLayer, TextLayer } from '../types/editor'
 import { DEFAULT_PRESET_ID, getPresetById, mmToPx } from '../utils/presets'
 
 interface HistoryEntry {
@@ -32,11 +32,13 @@ interface EditorState {
   setPreset: (presetId: string) => void
   addTextLayer: () => void
   addImageLayer: (src: string, width: number, height: number) => void
+  addShapeLayer: (shape: ShapeKind) => void
   updateLayerTransform: (
     id: string,
     transform: Partial<Pick<EditorLayer, 'x' | 'y' | 'width' | 'height' | 'rotation'>>,
   ) => void
   updateTextStyle: (id: string, style: Partial<Omit<TextLayer, keyof EditorLayer | 'type'>>) => void
+  updateShapeStyle: (id: string, style: Partial<Omit<ShapeLayer, keyof EditorLayer | 'type' | 'shape'>>) => void
   // Fabric fires one `object:modified` event for both a transform drag AND
   // Fabric's own inline text-editing (double-click on the canvas) — this
   // applies both in one history entry so canvas-driven edits aren't lost
@@ -155,6 +157,45 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }))
   },
 
+  addShapeLayer: (shape) => {
+    const id = createId()
+    const defaultSize: Record<ShapeKind, { width: number; height: number }> = {
+      rectangle: { width: 160, height: 100 },
+      ellipse: { width: 120, height: 120 },
+      triangle: { width: 120, height: 100 },
+      line: { width: 160, height: 0 },
+    }
+    const label: Record<ShapeKind, string> = {
+      rectangle: '사각형',
+      ellipse: '타원',
+      triangle: '삼각형',
+      line: '선',
+    }
+    const { width, height } = defaultSize[shape]
+    const newLayer: ShapeLayer = {
+      id,
+      type: 'shape',
+      shape,
+      name: `${label[shape]} ${get().layers.filter((l) => l.type === 'shape' && l.shape === shape).length + 1}`,
+      locked: false,
+      visible: true,
+      x: 40,
+      y: 40,
+      width,
+      height,
+      rotation: 0,
+      fill: '#e5e7eb',
+      stroke: '#111827',
+      strokeWidth: 2,
+    }
+    set((state) => ({
+      ...pushHistory(state),
+      layers: [...state.layers, newLayer],
+      selectedId: id,
+      selectedIds: [id],
+    }))
+  },
+
   updateLayerTransform: (id, transform) => {
     set((state) => ({
       ...pushHistory(state),
@@ -182,6 +223,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushHistory(state),
       layers: state.layers.map((layer) =>
         layer.id === id && layer.type === 'text' ? { ...layer, ...style } : layer,
+      ),
+    }))
+  },
+
+  updateShapeStyle: (id, style) => {
+    set((state) => ({
+      ...pushHistory(state),
+      layers: state.layers.map((layer) =>
+        layer.id === id && layer.type === 'shape' ? { ...layer, ...style } : layer,
       ),
     }))
   },

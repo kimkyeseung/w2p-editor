@@ -182,3 +182,35 @@ export function ImageIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+export function RectangleShapeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="2.5" y="4" width="11" height="8" rx="1" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  )
+}
+
+export function EllipseShapeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <ellipse cx="8" cy="8" rx="5.5" ry="4" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  )
+}
+
+export function TriangleShapeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M8 3L14 12.5H2L8 3Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function LineShapeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M2.5 12.5L13.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}

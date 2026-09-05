@@ -1,4 +1,4 @@
-export type LayerType = 'text' | 'image'
+export type LayerType = 'text' | 'image' | 'shape'
 
 export interface LayerBase {
   id: string
@@ -39,7 +39,17 @@ export interface ImageLayer extends LayerBase {
   src: string
 }
 
-export type EditorLayer = TextLayer | ImageLayer
+export type ShapeKind = 'rectangle' | 'ellipse' | 'triangle' | 'line'
+
+export interface ShapeLayer extends LayerBase {
+  type: 'shape'
+  shape: ShapeKind
+  fill: string
+  stroke: string
+  strokeWidth: number
+}
+
+export type EditorLayer = TextLayer | ImageLayer | ShapeLayer
 
 export interface CanvasPreset {
   id: string

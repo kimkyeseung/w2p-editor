@@ -1,6 +1,6 @@
 import { useEditorStore } from '../../store/editorStore'
 import { NumberField } from '../common/NumberField'
-import type { TextLayer } from '../../types/editor'
+import type { ShapeLayer, TextLayer } from '../../types/editor'
 import './PropertiesPanel.css'
 
 const FONT_OPTIONS = [
@@ -20,6 +20,7 @@ export function PropertiesPanel() {
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const updateLayerTransform = useEditorStore((s) => s.updateLayerTransform)
   const updateTextStyle = useEditorStore((s) => s.updateTextStyle)
+  const updateShapeStyle = useEditorStore((s) => s.updateShapeStyle)
   const renameLayer = useEditorStore((s) => s.renameLayer)
   const alignLayer = useEditorStore((s) => s.alignLayer)
 
@@ -48,6 +49,7 @@ export function PropertiesPanel() {
   }
 
   const textLayer = layer.type === 'text' ? (layer as TextLayer) : null
+  const shapeLayer = layer.type === 'shape' ? (layer as ShapeLayer) : null
 
   return (
     <div className="properties-panel">
@@ -156,6 +158,35 @@ export function PropertiesPanel() {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {shapeLayer && (
+        <div className="prop-section">
+          <span className="prop-section-title">도형</span>
+          {shapeLayer.shape !== 'line' && (
+            <label className="prop-field">
+              <span>채우기</span>
+              <input
+                type="color"
+                value={shapeLayer.fill}
+                onChange={(e) => updateShapeStyle(shapeLayer.id, { fill: e.target.value })}
+              />
+            </label>
+          )}
+          <label className="prop-field">
+            <span>선 색상</span>
+            <input
+              type="color"
+              value={shapeLayer.stroke}
+              onChange={(e) => updateShapeStyle(shapeLayer.id, { stroke: e.target.value })}
+            />
+          </label>
+          <NumberField
+            label="선 굵기"
+            value={shapeLayer.strokeWidth}
+            onCommit={(v) => updateShapeStyle(shapeLayer.id, { strokeWidth: Math.max(0, v) })}
+          />
         </div>
       )}
     </div>

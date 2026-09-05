@@ -3,7 +3,7 @@ import * as fabric from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
 import { ROTATE_CURSOR } from '../../utils/cursors'
-import type { EditorLayer, ImageLayer, LayerFolder, TextLayer } from '../../types/editor'
+import type { EditorLayer, ImageLayer, LayerFolder, ShapeLayer, TextLayer } from '../../types/editor'
 import {
   exportCanvasAsPng,
   importProjectFile,
@@ -135,6 +135,59 @@ const applyImageLayer = (obj: fabric.FabricImage, layer: ImageLayer, folders: La
   const baseHeight = obj.height || 1
   obj.set({ scaleX: layer.width / baseWidth, scaleY: layer.height / baseHeight })
   applyCommonTransform(obj, layer, folders)
+}
+
+// A line has no fillable area — the stored `fill` is kept on the layer (in
+// case it's ever reused for something else) but never applied to the object.
+const applyShapeStyle = (obj: fabric.Object, layer: ShapeLayer, folders: LayerFolder[]) => {
+  if (layer.shape === 'ellipse') {
+    ;(obj as fabric.Ellipse).set({ rx: layer.width / 2, ry: layer.height / 2 })
+  } else if (layer.shape === 'line') {
+    ;(obj as fabric.Line).set({ x1: 0, y1: 0, x2: layer.width, y2: layer.height })
+  } else {
+    obj.set({ width: layer.width, height: layer.height })
+  }
+  obj.set({
+    fill: layer.shape === 'line' ? '' : layer.fill,
+    stroke: layer.stroke,
+    strokeWidth: layer.strokeWidth,
+  })
+  applyCommonTransform(obj, layer, folders)
+}
+
+const createShapeObject = (layer: ShapeLayer, folders: LayerFolder[]): fabric.Object => {
+  const { centerX, centerY } = centerFromTopLeft(layer)
+  const visible = isLayerVisible(layer, folders)
+  const locked = isLayerLocked(layer, folders)
+  const common = {
+    originX: 'center' as const,
+    originY: 'center' as const,
+    left: centerX,
+    top: centerY,
+    angle: layer.rotation,
+    fill: layer.shape === 'line' ? '' : layer.fill,
+    stroke: layer.stroke,
+    strokeWidth: layer.strokeWidth,
+    visible,
+    selectable: !locked && visible,
+    evented: !locked && visible,
+  }
+  let obj: fabric.Object
+  switch (layer.shape) {
+    case 'ellipse':
+      obj = new fabric.Ellipse({ ...common, rx: layer.width / 2, ry: layer.height / 2 })
+      break
+    case 'triangle':
+      obj = new fabric.Triangle({ ...common, width: layer.width, height: layer.height })
+      break
+    case 'line':
+      obj = new fabric.Line([0, 0, layer.width, layer.height], common)
+      break
+    default:
+      obj = new fabric.Rect({ ...common, width: layer.width, height: layer.height })
+  }
+  applyRotateCursor(obj)
+  return obj
 }
 
 // The zoom/pan view state below is a pure presentation concern (how much of
@@ -629,6 +682,8 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
           applyTextLayer(existing, layer, folders)
         } else if (layer.type === 'image') {
           applyImageLayer(existing as fabric.FabricImage, layer, folders)
+        } else if (layer.type === 'shape') {
+          applyShapeStyle(existing, layer, folders)
         }
         canvas.moveObjectTo(existing, index)
         return
@@ -636,6 +691,12 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
 
       if (layer.type === 'text') {
         const obj = createTextObject(layer, folders)
+        idToObject.current.set(layer.id, obj)
+        objectToId.current.set(obj, layer.id)
+        canvas.add(obj)
+        canvas.moveObjectTo(obj, index)
+      } else if (layer.type === 'shape') {
+        const obj = createShapeObject(layer, folders)
         idToObject.current.set(layer.id, obj)
         objectToId.current.set(obj, layer.id)
         canvas.add(obj)

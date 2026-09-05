@@ -3,8 +3,17 @@ import { useEditorStore } from '../../store/editorStore'
 import { CANVAS_PRESETS } from '../../utils/presets'
 import { readImageFile } from '../../utils/canvasSerialization'
 import { SAMPLE_PROJECTS } from '../../utils/sampleProjects'
+import { EllipseShapeIcon, LineShapeIcon, RectangleShapeIcon, TriangleShapeIcon } from '../common/icons'
 import type { CanvasHandle } from '../Canvas/Canvas'
+import type { ShapeKind } from '../../types/editor'
 import './Toolbar.css'
+
+const SHAPE_BUTTONS: { kind: ShapeKind; label: string; Icon: typeof RectangleShapeIcon }[] = [
+  { kind: 'rectangle', label: '사각형', Icon: RectangleShapeIcon },
+  { kind: 'ellipse', label: '타원', Icon: EllipseShapeIcon },
+  { kind: 'triangle', label: '삼각형', Icon: TriangleShapeIcon },
+  { kind: 'line', label: '선', Icon: LineShapeIcon },
+]
 
 const MAX_INITIAL_IMAGE_WIDTH = 320
 
@@ -23,6 +32,7 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
   const setPreset = useEditorStore((s) => s.setPreset)
   const addTextLayer = useEditorStore((s) => s.addTextLayer)
   const addImageLayer = useEditorStore((s) => s.addImageLayer)
+  const addShapeLayer = useEditorStore((s) => s.addShapeLayer)
   const replaceAll = useEditorStore((s) => s.replaceAll)
   const undo = useEditorStore((s) => s.undo)
   const redo = useEditorStore((s) => s.redo)
@@ -112,6 +122,11 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
           hidden
           onChange={handleImageChange}
         />
+        {SHAPE_BUTTONS.map(({ kind, label, Icon }) => (
+          <button key={kind} type="button" title={`+ ${label}`} onClick={() => addShapeLayer(kind)}>
+            <Icon />
+          </button>
+        ))}
       </div>
 
       <div className="toolbar-group">

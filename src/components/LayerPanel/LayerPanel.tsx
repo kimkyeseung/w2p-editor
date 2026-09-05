@@ -1,21 +1,32 @@
 import { useMemo } from 'react'
 import { useEditorStore } from '../../store/editorStore'
-import type { EditorLayer, LayerFolder } from '../../types/editor'
+import type { EditorLayer, LayerFolder, ShapeKind } from '../../types/editor'
 import {
   BringFrontIcon,
   ChevronRightIcon,
   DuplicateIcon,
+  EllipseShapeIcon,
   EyeIcon,
   EyeOffIcon,
   FolderIcon,
   FolderPlusIcon,
   ImageIcon,
+  LineShapeIcon,
   LockIcon,
+  RectangleShapeIcon,
   SendBackIcon,
   TrashIcon,
+  TriangleShapeIcon,
   UnlockIcon,
 } from '../common/icons'
 import './LayerPanel.css'
+
+const SHAPE_ICONS: Record<ShapeKind, typeof RectangleShapeIcon> = {
+  rectangle: RectangleShapeIcon,
+  ellipse: EllipseShapeIcon,
+  triangle: TriangleShapeIcon,
+  line: LineShapeIcon,
+}
 
 type PanelRow =
   | { kind: 'folder'; folder: LayerFolder; members: EditorLayer[] }
@@ -88,7 +99,16 @@ function LayerRow({ layer, indented, showReorder }: LayerRowProps) {
       onClick={handleClick}
     >
       <span className="layer-type-icon" aria-hidden="true">
-        {layer.type === 'text' ? 'T' : <ImageIcon />}
+        {layer.type === 'text' ? (
+          'T'
+        ) : layer.type === 'shape' ? (
+          (() => {
+            const ShapeIcon = SHAPE_ICONS[layer.shape]
+            return <ShapeIcon />
+          })()
+        ) : (
+          <ImageIcon />
+        )}
       </span>
       <span className="layer-name" title={layer.name}>
         {layer.name}
