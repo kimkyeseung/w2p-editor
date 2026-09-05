@@ -172,6 +172,24 @@
   padding-left: 1.6rem;
 }
 
+.layer-row.is-drop-target {
+  background: #eff6ff;
+  border-color: #2563eb;
+  border-style: dashed;
+}
+
+/* No longer has an independent canvas object of its own once it's clipping
+   another layer (see the clipPathId comment on LayerBase) — dimmed and
+   italicized so that's visually obvious in the panel. */
+.layer-row.is-mask-layer .layer-name {
+  font-style: italic;
+  color: #6b7280;
+}
+
+.layer-row.is-mask-layer .layer-type-icon {
+  color: #2563eb;
+}
+
 .layer-folder {
   display: flex;
   flex-direction: column;

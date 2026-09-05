@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-09-05T18:10:42.812Z",
+  "lastUpdated": "2026-09-05T18:34:00.363Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -38,9 +38,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:40:10.127Z",
-        "lastUpdated": "2026-09-05T18:02:12.993Z"
+        "lastUpdated": "2026-09-05T18:25:06.676Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/utils/sampleProjects.ts"
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/common/icons.tsx"
     },
     "store": {
       "phase": "do",
@@ -51,7 +51,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:41:19.891Z",
-        "lastUpdated": "2026-09-05T18:10:42.812Z"
+        "lastUpdated": "2026-09-05T18:34:00.363Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/store/editorStore.test.ts"
     },
@@ -64,9 +64,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:45:57.583Z",
-        "lastUpdated": "2026-09-05T18:10:21.477Z"
+        "lastUpdated": "2026-09-05T18:23:26.466Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Canvas/canvasHelpers.test.ts"
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/Canvas/Canvas.tsx"
     },
     "Toolbar": {
       "phase": "do",
@@ -90,7 +90,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:46:37.349Z",
-        "lastUpdated": "2026-09-05T05:45:44.323Z"
+        "lastUpdated": "2026-09-05T18:26:44.224Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/LayerPanel/LayerPanel.tsx"
     },
@@ -194,7 +194,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-05T18:10:42.812Z"
+    "lastActivity": "2026-09-05T18:34:00.363Z"
   },
   "history": [
     {
@@ -2341,6 +2341,90 @@
     },
     {
       "timestamp": "2026-09-05T18:10:42.812Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:21:48.131Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:22:05.871Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:22:15.864Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:22:43.324Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:23:06.801Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:23:26.466Z",
+      "feature": "Canvas",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:25:06.676Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:25:16.293Z",
+      "feature": "LayerPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:25:44.983Z",
+      "feature": "LayerPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:26:11.815Z",
+      "feature": "LayerPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:26:20.251Z",
+      "feature": "LayerPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:26:35.583Z",
+      "feature": "LayerPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:26:44.224Z",
+      "feature": "LayerPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T18:34:00.363Z",
       "feature": "store",
       "phase": "do",
       "action": "updated"

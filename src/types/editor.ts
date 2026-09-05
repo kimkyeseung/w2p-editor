@@ -44,6 +44,12 @@ export interface LayerBase {
   // contiguous run *is* the folder's position in z-order) — a folder has no
   // z-order slot of its own, it's purely a layer-panel grouping concept.
   folderId?: string
+  // The id of another layer whose shape clips this layer's visible content
+  // (a Fabric clipPath), set by dragging a layer onto another in the layer
+  // panel. The referenced (mask) layer is consumed purely as a clip shape —
+  // it stops rendering as an independent canvas object once something
+  // references it this way (see Canvas.tsx's reconciliation effect).
+  clipPathId?: string
 }
 
 export interface LayerFolder {

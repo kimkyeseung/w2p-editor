@@ -390,6 +390,15 @@ export function LayoutGridIcon({ className }: IconProps) {
   )
 }
 
+export function ClipMaskIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="2.5" y="2.5" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="10.5" cy="10.5" r="3.5" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  )
+}
+
 export function ChevronDownIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

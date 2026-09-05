@@ -445,3 +445,99 @@ describe('updateShapeGradient', () => {
     expect(useEditorStore.getState().layers[0]).toEqual(before)
   })
 })
+
+describe('setClipMask / removeClipMask', () => {
+  it('sets clipPathId on the target to the mask id', () => {
+    useEditorStore.getState().addShapeLayer('ellipse')
+    const maskId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const targetId = useEditorStore.getState().layers[1].id
+
+    useEditorStore.getState().setClipMask(maskId, targetId)
+    expect(useEditorStore.getState().layers.find((l) => l.id === targetId)!.clipPathId).toBe(maskId)
+  })
+
+  it('repositions the mask to sit directly above the target in z-order', () => {
+    useEditorStore.getState().addShapeLayer('rectangle') // index 0: target
+    const targetId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('ellipse') // index 1: mask (starts far from target)
+    const maskId = useEditorStore.getState().layers[1].id
+    useEditorStore.getState().addShapeLayer('triangle') // index 2: unrelated, should stay put
+    const otherId = useEditorStore.getState().layers[2].id
+
+    useEditorStore.getState().setClipMask(maskId, targetId)
+    const ids = useEditorStore.getState().layers.map((l) => l.id)
+    const targetIndex = ids.indexOf(targetId)
+    expect(ids[targetIndex + 1]).toBe(maskId)
+    expect(ids).toContain(otherId)
+    expect(ids).toHaveLength(3)
+  })
+
+  it('is a no-op when asked to mask a layer with itself', () => {
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const id = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().setClipMask(id, id)
+    expect(useEditorStore.getState().layers[0].clipPathId).toBeUndefined()
+  })
+
+  it('refuses an image layer as a mask source', () => {
+    useEditorStore.getState().addImageLayer('/x.png', 100, 100)
+    const maskId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const targetId = useEditorStore.getState().layers[1].id
+
+    useEditorStore.getState().setClipMask(maskId, targetId)
+    expect(useEditorStore.getState().layers.find((l) => l.id === targetId)!.clipPathId).toBeUndefined()
+  })
+
+  it('refuses a direct two-layer cycle (A clips B, B clips A)', () => {
+    useEditorStore.getState().addShapeLayer('ellipse')
+    const aId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const bId = useEditorStore.getState().layers[1].id
+
+    useEditorStore.getState().setClipMask(aId, bId) // A clips B
+    useEditorStore.getState().setClipMask(bId, aId) // attempt B clips A — refused
+    expect(useEditorStore.getState().layers.find((l) => l.id === aId)!.clipPathId).toBeUndefined()
+    expect(useEditorStore.getState().layers.find((l) => l.id === bId)!.clipPathId).toBe(aId)
+  })
+
+  it("joins the target's folder to preserve its contiguous-run invariant", () => {
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const targetId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('triangle')
+    const folderMateId = useEditorStore.getState().layers[1].id
+    useEditorStore.getState().groupLayers([targetId, folderMateId])
+    const folderId = useEditorStore.getState().layers.find((l) => l.id === targetId)!.folderId
+
+    useEditorStore.getState().addShapeLayer('ellipse')
+    const maskId = useEditorStore.getState().layers[useEditorStore.getState().layers.length - 1].id
+    useEditorStore.getState().setClipMask(maskId, targetId)
+
+    expect(useEditorStore.getState().layers.find((l) => l.id === maskId)!.folderId).toBe(folderId)
+  })
+
+  it('removeClipMask clears the relationship', () => {
+    useEditorStore.getState().addShapeLayer('ellipse')
+    const maskId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const targetId = useEditorStore.getState().layers[1].id
+    useEditorStore.getState().setClipMask(maskId, targetId)
+
+    useEditorStore.getState().removeClipMask(targetId)
+    expect(useEditorStore.getState().layers.find((l) => l.id === targetId)!.clipPathId).toBeUndefined()
+  })
+
+  it('is undoable in a single step', () => {
+    useEditorStore.getState().addShapeLayer('ellipse')
+    const maskId = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const targetId = useEditorStore.getState().layers[1].id
+
+    useEditorStore.getState().setClipMask(maskId, targetId)
+    expect(useEditorStore.getState().layers.find((l) => l.id === targetId)!.clipPathId).toBe(maskId)
+
+    useEditorStore.getState().undo()
+    expect(useEditorStore.getState().layers.find((l) => l.id === targetId)!.clipPathId).toBeUndefined()
+  })
+})

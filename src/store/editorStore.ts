@@ -103,6 +103,15 @@ interface EditorState {
   toggleLock: (id: string) => void
   toggleVisible: (id: string) => void
   reorderLayer: (id: string, direction: 'front' | 'back' | 'forward' | 'backward') => void
+  // Uses `maskId`'s shape to clip `targetId`'s visible content (a Fabric
+  // clipPath), set by dragging one layer panel row onto another. The mask
+  // layer can't be an image (Canvas.tsx builds the clip shape synchronously
+  // every render pass, and image layers load asynchronously). Repositions
+  // the mask to sit directly above the target in z-order, joining the
+  // target's folder if any, to keep that folder's contiguous-run invariant
+  // intact.
+  setClipMask: (maskId: string, targetId: string) => void
+  removeClipMask: (targetId: string) => void
   alignLayer: (id: string, alignment: 'left' | 'center-x' | 'right' | 'top' | 'center-y' | 'bottom') => void
   // Illustrator-style "align to selection" (as opposed to alignLayer's
   // align-to-canvas): positions every given layer relative to the
@@ -509,6 +518,35 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       else layers.splice(Math.max(index - 1, 0), 0, item)
       return { ...pushHistory(state), layers }
     })
+  },
+
+  setClipMask: (maskId, targetId) => {
+    if (maskId === targetId) return
+    set((state) => {
+      const mask = state.layers.find((l) => l.id === maskId)
+      const target = state.layers.find((l) => l.id === targetId)
+      // Only text/shape can act as a mask — see the interface comment.
+      // Also refuses a direct two-layer cycle (A clips B, B clips A).
+      if (!mask || !target || mask.type === 'image' || mask.clipPathId === targetId) return state
+
+      const withoutMask = state.layers.filter((l) => l.id !== maskId)
+      const targetIndex = withoutMask.findIndex((l) => l.id === targetId)
+      const repositionedMask: EditorLayer = { ...mask, clipPathId: undefined, folderId: target.folderId }
+      const layers = [
+        ...withoutMask.slice(0, targetIndex + 1),
+        repositionedMask,
+        ...withoutMask.slice(targetIndex + 1),
+      ].map((l) => (l.id === targetId ? { ...l, clipPathId: maskId } : l))
+
+      return { ...pushHistory(state), layers }
+    })
+  },
+
+  removeClipMask: (targetId) => {
+    set((state) => ({
+      ...pushHistory(state),
+      layers: state.layers.map((l) => (l.id === targetId ? { ...l, clipPathId: undefined } : l)),
+    }))
   },
 
   alignLayer: (id, alignment) => {

@@ -4,6 +4,7 @@ import type { EditorLayer, LayerFolder, ShapeKind } from '../../types/editor'
 import {
   BringFrontIcon,
   ChevronRightIcon,
+  ClipMaskIcon,
   DuplicateIcon,
   EllipseShapeIcon,
   EyeIcon,
@@ -72,9 +73,13 @@ interface LayerRowProps {
   layer: EditorLayer
   indented: boolean
   showReorder: boolean
+  // Whether some other layer currently uses this one as a clip mask (see
+  // the clipPathId comment on LayerBase) — it's rendered dimmed with a
+  // dedicated icon since it no longer has an independent canvas object.
+  isMask: boolean
 }
 
-function LayerRow({ layer, indented, showReorder }: LayerRowProps) {
+function LayerRow({ layer, indented, showReorder, isMask }: LayerRowProps) {
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const selectLayer = useEditorStore((s) => s.selectLayer)
   const toggleSelectLayer = useEditorStore((s) => s.toggleSelectLayer)
@@ -84,6 +89,8 @@ function LayerRow({ layer, indented, showReorder }: LayerRowProps) {
   const toggleVisible = useEditorStore((s) => s.toggleVisible)
   const reorderLayer = useEditorStore((s) => s.reorderLayer)
   const ungroupLayer = useEditorStore((s) => s.ungroupLayer)
+  const setClipMask = useEditorStore((s) => s.setClipMask)
+  const removeClipMask = useEditorStore((s) => s.removeClipMask)
 
   const visible = layer.visible !== false
   const isSelected = selectedIds.includes(layer.id)
@@ -93,13 +100,43 @@ function LayerRow({ layer, indented, showReorder }: LayerRowProps) {
     else selectLayer(layer.id)
   }
 
+  // Drag one row onto another to clip the drop target with the dragged
+  // layer's shape — image layers can't be dragged as a mask source (see the
+  // setClipMask comment), so they're left non-draggable rather than
+  // silently accepting a drop that will just no-op in the store.
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', layer.id)
+    e.dataTransfer.effectAllowed = 'link'
+  }
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'link'
+    e.currentTarget.classList.add('is-drop-target')
+  }
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('is-drop-target')
+  }
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.currentTarget.classList.remove('is-drop-target')
+    const maskId = e.dataTransfer.getData('text/plain')
+    if (maskId) setClipMask(maskId, layer.id)
+  }
+
   return (
     <li
-      className={`layer-row ${isSelected ? 'is-selected' : ''} ${visible ? '' : 'is-hidden'} ${indented ? 'is-indented' : ''}`}
+      className={`layer-row ${isSelected ? 'is-selected' : ''} ${visible ? '' : 'is-hidden'} ${indented ? 'is-indented' : ''} ${isMask ? 'is-mask-layer' : ''}`}
       onClick={handleClick}
+      draggable={layer.type !== 'image'}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       <span className="layer-type-icon" aria-hidden="true">
-        {layer.type === 'text' ? (
+        {isMask ? (
+          <ClipMaskIcon />
+        ) : layer.type === 'text' ? (
           'T'
         ) : layer.type === 'shape' ? (
           (() => {
@@ -110,7 +147,7 @@ function LayerRow({ layer, indented, showReorder }: LayerRowProps) {
           <ImageIcon />
         )}
       </span>
-      <span className="layer-name" title={layer.name}>
+      <span className="layer-name" title={isMask ? `${layer.name} (마스크로 사용 중)` : layer.name}>
         {layer.name}
       </span>
       <span className="layer-actions" onClick={(e) => e.stopPropagation()}>
@@ -148,6 +185,16 @@ function LayerRow({ layer, indented, showReorder }: LayerRowProps) {
             <FolderPlusIcon />
           </button>
         )}
+        {layer.clipPathId && (
+          <button
+            type="button"
+            className="is-active"
+            title="마스크 해제"
+            onClick={() => removeClipMask(layer.id)}
+          >
+            <ClipMaskIcon />
+          </button>
+        )}
         <button type="button" title="삭제" onClick={() => removeLayer(layer.id)}>
           <TrashIcon />
         </button>
@@ -159,9 +206,10 @@ function LayerRow({ layer, indented, showReorder }: LayerRowProps) {
 interface FolderRowProps {
   folder: LayerFolder
   members: EditorLayer[]
+  maskIds: Set<string>
 }
 
-function FolderRow({ folder, members }: FolderRowProps) {
+function FolderRow({ folder, members, maskIds }: FolderRowProps) {
   const renameFolder = useEditorStore((s) => s.renameFolder)
   const removeFolder = useEditorStore((s) => s.removeFolder)
   const toggleFolderVisible = useEditorStore((s) => s.toggleFolderVisible)
@@ -224,7 +272,7 @@ function FolderRow({ folder, members }: FolderRowProps) {
       {!folder.collapsed && members.length > 0 && (
         <ul className="layer-folder-members">
           {members.map((layer) => (
-            <LayerRow key={layer.id} layer={layer} indented showReorder={false} />
+            <LayerRow key={layer.id} layer={layer} indented showReorder={false} isMask={maskIds.has(layer.id)} />
           ))}
         </ul>
       )}
@@ -241,6 +289,10 @@ export function LayerPanel() {
   const groupLayers = useEditorStore((s) => s.groupLayers)
 
   const rows = useMemo(() => buildPanelRows(layers, folders), [layers, folders])
+  const maskIds = useMemo(
+    () => new Set(layers.map((l) => l.clipPathId).filter((id): id is string => id !== undefined)),
+    [layers],
+  )
   const multiSelected = selectedIds.length > 1
 
   return (
@@ -269,9 +321,15 @@ export function LayerPanel() {
       <ul className="layer-list">
         {rows.map((row) =>
           row.kind === 'folder' ? (
-            <FolderRow key={row.folder.id} folder={row.folder} members={row.members} />
+            <FolderRow key={row.folder.id} folder={row.folder} members={row.members} maskIds={maskIds} />
           ) : (
-            <LayerRow key={row.layer.id} layer={row.layer} indented={false} showReorder />
+            <LayerRow
+              key={row.layer.id}
+              layer={row.layer}
+              indented={false}
+              showReorder
+              isMask={maskIds.has(row.layer.id)}
+            />
           ),
         )}
       </ul>

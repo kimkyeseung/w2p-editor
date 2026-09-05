@@ -694,9 +694,16 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       if (isStale) canvas.discardActiveObject()
     }
 
+    // A layer referenced by another layer's clipPathId is consumed purely as
+    // a clip shape (see the LayerBase.clipPathId comment) — it never gets an
+    // independent canvas object of its own.
+    const maskedAwayIds = new Set(
+      layers.map((l) => l.clipPathId).filter((id): id is string => id !== undefined),
+    )
+
     const currentIds = new Set(layers.map((l) => l.id))
     for (const [id, obj] of Array.from(idToObject.current.entries())) {
-      if (!currentIds.has(id)) {
+      if (!currentIds.has(id) || maskedAwayIds.has(id)) {
         canvas.remove(obj)
         idToObject.current.delete(id)
         objectToId.current.delete(obj)
@@ -704,6 +711,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     }
 
     layers.forEach((layer, index) => {
+      if (maskedAwayIds.has(layer.id)) return
       const existing = idToObject.current.get(layer.id)
       if (existing) {
         if (layer.type === 'text' && existing instanceof fabric.Textbox) {
@@ -752,6 +760,27 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
             pendingImageIds.current.delete(layer.id)
           })
       }
+    })
+
+    // Sync each layer's Fabric clipPath from its own clipPathId, rebuilding
+    // the clip shape fresh every pass so editing the mask layer's own
+    // position/size (via the properties panel — it has no canvas object of
+    // its own to drag) keeps the clip in sync live. absolutePositioned:true
+    // means the clip shape's x/y/rotation are read as ordinary canvas-space
+    // coordinates, exactly like any other layer, regardless of the target's
+    // own transform.
+    layers.forEach((layer) => {
+      if (maskedAwayIds.has(layer.id)) return
+      const obj = idToObject.current.get(layer.id)
+      if (!obj) return
+      const maskLayer = layer.clipPathId ? layers.find((l) => l.id === layer.clipPathId) : undefined
+      if (!maskLayer || maskLayer.type === 'image') {
+        if (obj.clipPath) obj.set({ clipPath: undefined })
+        return
+      }
+      const clipObj = maskLayer.type === 'text' ? createTextObject(maskLayer, folders) : createShapeObject(maskLayer, folders)
+      clipObj.absolutePositioned = true
+      obj.set({ clipPath: clipObj })
     })
 
     if (selectedIds.length === 0) {
