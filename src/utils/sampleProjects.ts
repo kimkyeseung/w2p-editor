@@ -16,6 +16,7 @@ const textLayer = (
   visible: true,
   rotation: 0,
   opacity: 1,
+  shadow: { enabled: false, color: '#000000', blur: 10, offsetX: 5, offsetY: 5 },
   fontFamily: 'Noto Sans KR',
   fontSize: 14,
   color: '#111827',
@@ -36,6 +37,7 @@ const imageLayer = (
   visible: true,
   rotation: 0,
   opacity: 1,
+  shadow: { enabled: false, color: '#000000', blur: 10, offsetX: 5, offsetY: 5 },
   ...overrides,
 })
 

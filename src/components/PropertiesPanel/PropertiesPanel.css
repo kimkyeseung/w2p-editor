@@ -20,6 +20,17 @@
   color: #4b5563;
 }
 
+.prop-field-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.prop-field-checkbox input {
+  width: auto;
+}
+
 .prop-field input[type='text'],
 .prop-field input[type='number'],
 .prop-field select,

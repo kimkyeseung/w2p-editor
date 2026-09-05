@@ -19,6 +19,7 @@ export function PropertiesPanel() {
   const selectedId = useEditorStore((s) => s.selectedId)
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const updateLayerTransform = useEditorStore((s) => s.updateLayerTransform)
+  const updateLayerShadow = useEditorStore((s) => s.updateLayerShadow)
   const updateTextStyle = useEditorStore((s) => s.updateTextStyle)
   const updateShapeStyle = useEditorStore((s) => s.updateShapeStyle)
   const renameLayer = useEditorStore((s) => s.renameLayer)
@@ -113,6 +114,46 @@ export function PropertiesPanel() {
             하단
           </button>
         </div>
+      </div>
+
+      <div className="prop-section">
+        <label className="prop-field prop-field-checkbox">
+          <input
+            type="checkbox"
+            checked={layer.shadow.enabled}
+            onChange={(e) => updateLayerShadow(layer.id, { enabled: e.target.checked })}
+          />
+          <span>그림자 효과</span>
+        </label>
+        {layer.shadow.enabled && (
+          <>
+            <label className="prop-field">
+              <span>그림자 색상</span>
+              <input
+                type="color"
+                value={layer.shadow.color}
+                onChange={(e) => updateLayerShadow(layer.id, { color: e.target.value })}
+              />
+            </label>
+            <NumberField
+              label="흐림 정도"
+              value={layer.shadow.blur}
+              onCommit={(v) => updateLayerShadow(layer.id, { blur: Math.max(0, v) })}
+            />
+            <div className="prop-grid">
+              <NumberField
+                label="X 오프셋"
+                value={layer.shadow.offsetX}
+                onCommit={(v) => updateLayerShadow(layer.id, { offsetX: v })}
+              />
+              <NumberField
+                label="Y 오프셋"
+                value={layer.shadow.offsetY}
+                onCommit={(v) => updateLayerShadow(layer.id, { offsetY: v })}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {textLayer && (

@@ -3,7 +3,7 @@ import * as fabric from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
 import { ROTATE_CURSOR } from '../../utils/cursors'
-import type { EditorLayer, ImageLayer, LayerFolder, ShapeLayer, TextLayer } from '../../types/editor'
+import type { EditorLayer, ImageLayer, LayerFolder, LayerShadow, ShapeLayer, TextLayer } from '../../types/editor'
 import {
   exportCanvasAsPng,
   importProjectFile,
@@ -32,6 +32,16 @@ const centerFromTopLeft = (layer: Pick<EditorLayer, 'x' | 'y' | 'width' | 'heigh
   centerX: layer.x + layer.width / 2,
   centerY: layer.y + layer.height / 2,
 })
+
+const buildShadow = (shadow: LayerShadow): fabric.Shadow | null =>
+  shadow.enabled
+    ? new fabric.Shadow({
+        color: shadow.color,
+        blur: shadow.blur,
+        offsetX: shadow.offsetX,
+        offsetY: shadow.offsetY,
+      })
+    : null
 
 const topLeftFromObject = (obj: fabric.FabricObject) => {
   const center = obj.getCenterPoint()
@@ -72,6 +82,7 @@ const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer, fold
   obj.set({
     visible,
     opacity: layer.opacity,
+    shadow: buildShadow(layer.shadow),
     selectable: !locked && visible,
     evented: !locked && visible,
   })
@@ -128,6 +139,7 @@ const createTextObject = (layer: TextLayer, folders: LayerFolder[]): fabric.Text
     textAlign: layer.align,
     angle: layer.rotation,
     opacity: layer.opacity,
+    shadow: buildShadow(layer.shadow),
     visible,
     selectable: !locked && visible,
     evented: !locked && visible,
@@ -179,6 +191,7 @@ const createShapeObject = (layer: ShapeLayer, folders: LayerFolder[]): fabric.Ob
     stroke: layer.stroke,
     strokeWidth: layer.strokeWidth,
     opacity: layer.opacity,
+    shadow: buildShadow(layer.shadow),
     visible,
     selectable: !locked && visible,
     evented: !locked && visible,

@@ -1,5 +1,16 @@
 export type LayerType = 'text' | 'image' | 'shape'
 
+// Kept as a single required object (rather than an optional `shadow?`) so
+// toggling the effect off and back on preserves the last color/blur/offset
+// the user dialed in, instead of resetting to defaults each time.
+export interface LayerShadow {
+  enabled: boolean
+  color: string
+  blur: number
+  offsetX: number
+  offsetY: number
+}
+
 export interface LayerBase {
   id: string
   type: LayerType
@@ -13,6 +24,7 @@ export interface LayerBase {
   rotation: number
   // 0-1, applies to every layer type (Fabric's own opacity range).
   opacity: number
+  shadow: LayerShadow
   // Layers sharing a folderId are kept contiguous in the layers array (that
   // contiguous run *is* the folder's position in z-order) — a folder has no
   // z-order slot of its own, it's purely a layer-panel grouping concept.
