@@ -402,3 +402,46 @@ describe('repeatLastTransform', () => {
     expect(xyOf(idB)).toEqual({ x: 0, y: 0 })
   })
 })
+
+describe('updateShapeGradient', () => {
+  it('defaults to a disabled linear gradient on a new shape layer', () => {
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const layer = useEditorStore.getState().layers[0] as ShapeLayer
+    expect(layer.gradient).toEqual({
+      enabled: false,
+      type: 'linear',
+      angle: 90,
+      colorStops: ['#2563eb', '#e5e7eb'],
+    })
+  })
+
+  it('merges a partial gradient patch, preserving untouched fields', () => {
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const id = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().updateShapeGradient(id, { enabled: true, type: 'radial' })
+    const gradient = (useEditorStore.getState().layers[0] as ShapeLayer).gradient
+    expect(gradient).toEqual({ enabled: true, type: 'radial', angle: 90, colorStops: ['#2563eb', '#e5e7eb'] })
+  })
+
+  it('preserves the last color stops/angle across a disable/re-enable cycle', () => {
+    useEditorStore.getState().addShapeLayer('rectangle')
+    const id = useEditorStore.getState().layers[0].id
+    useEditorStore.getState().updateShapeGradient(id, {
+      enabled: true,
+      angle: 45,
+      colorStops: ['#ff0000', '#00ff00'],
+    })
+    useEditorStore.getState().updateShapeGradient(id, { enabled: false })
+    useEditorStore.getState().updateShapeGradient(id, { enabled: true })
+    const gradient = (useEditorStore.getState().layers[0] as ShapeLayer).gradient
+    expect(gradient).toEqual({ enabled: true, type: 'linear', angle: 45, colorStops: ['#ff0000', '#00ff00'] })
+  })
+
+  it('is a no-op on a non-shape layer', () => {
+    useEditorStore.getState().addTextLayer()
+    const id = useEditorStore.getState().layers[0].id
+    const before = useEditorStore.getState().layers[0]
+    useEditorStore.getState().updateShapeGradient(id, { enabled: true } as never)
+    expect(useEditorStore.getState().layers[0]).toEqual(before)
+  })
+})

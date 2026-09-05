@@ -1,5 +1,5 @@
 import * as fabric from 'fabric'
-import type { EditorLayer, LayerBorder, LayerFolder, LayerShadow } from '../../types/editor'
+import type { EditorLayer, LayerBorder, LayerFolder, LayerShadow, ShapeLayer } from '../../types/editor'
 
 // Fabric.js v6+ positions objects by their CENTER (originX/originY default to
 // 'center'), not their top-left corner. Our EditorLayer model — and the
@@ -21,6 +21,45 @@ export const buildShadow = (shadow: LayerShadow): fabric.Shadow | null =>
         offsetY: shadow.offsetY,
       })
     : null
+
+// Falls back to the shape's plain solid `fill` when the gradient is off —
+// the two are mutually exclusive on ShapeLayer, never layered together.
+// Coordinates use gradientUnits: 'percentage' (0-1 as a fraction of the
+// object's own bounding box) rather than pixels, so the gradient scales
+// automatically with the shape and never needs to know its actual size.
+export const buildFill = (
+  layer: Pick<ShapeLayer, 'fill' | 'gradient' | 'shape'>,
+): string | fabric.Gradient<'linear'> | fabric.Gradient<'radial'> => {
+  // A line has no fillable area — `fill`/`gradient` are kept on the layer
+  // (in case they're ever reused) but never applied to the object.
+  if (layer.shape === 'line') return ''
+  if (!layer.gradient.enabled) return layer.fill
+  const [start, end] = layer.gradient.colorStops
+  const colorStops = [
+    { offset: 0, color: start },
+    { offset: 1, color: end },
+  ]
+  if (layer.gradient.type === 'radial') {
+    return new fabric.Gradient({
+      type: 'radial',
+      gradientUnits: 'percentage',
+      coords: { x1: 0.5, y1: 0.5, r1: 0, x2: 0.5, y2: 0.5, r2: 0.5 },
+      colorStops,
+    })
+  }
+  const rad = (layer.gradient.angle * Math.PI) / 180
+  return new fabric.Gradient({
+    type: 'linear',
+    gradientUnits: 'percentage',
+    coords: {
+      x1: 0.5 - 0.5 * Math.cos(rad),
+      y1: 0.5 - 0.5 * Math.sin(rad),
+      x2: 0.5 + 0.5 * Math.cos(rad),
+      y2: 0.5 + 0.5 * Math.sin(rad),
+    },
+    colorStops,
+  })
+}
 
 // Only meaningful for text/image layers — shape layers already own
 // stroke/strokeWidth via ShapeLayer.stroke and apply it themselves in

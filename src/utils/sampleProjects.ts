@@ -64,6 +64,7 @@ const shapeLayer = (
   flipY: false,
   blendMode: 'source-over',
   fill: '#e5e7eb',
+  gradient: { enabled: false, type: 'linear', angle: 90, colorStops: ['#2563eb', '#e5e7eb'] },
   stroke: '#111827',
   strokeWidth: 0,
   ...overrides,

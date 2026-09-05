@@ -4,6 +4,7 @@ import type {
   ImageLayer,
   LayerBorder,
   LayerFolder,
+  LayerGradient,
   LayerShadow,
   ShapeKind,
   ShapeLayer,
@@ -82,6 +83,7 @@ interface EditorState {
   addRecentColor: (color: string) => void
   updateTextStyle: (id: string, style: Partial<Omit<TextLayer, keyof EditorLayer | 'type'>>) => void
   updateShapeStyle: (id: string, style: Partial<Omit<ShapeLayer, keyof EditorLayer | 'type' | 'shape'>>) => void
+  updateShapeGradient: (id: string, gradient: Partial<LayerGradient>) => void
   // Fabric fires one `object:modified` event for both a transform drag AND
   // Fabric's own inline text-editing (double-click on the canvas) — this
   // applies both in one history entry so canvas-driven edits aren't lost
@@ -263,6 +265,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       flipY: false,
       blendMode: 'source-over',
       fill: '#e5e7eb',
+      gradient: { enabled: false, type: 'linear', angle: 90, colorStops: ['#2563eb', '#e5e7eb'] },
       stroke: '#111827',
       strokeWidth: 2,
     }
@@ -375,6 +378,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...pushHistory(state),
       layers: state.layers.map((layer) =>
         layer.id === id && layer.type === 'shape' ? { ...layer, ...style } : layer,
+      ),
+    }))
+  },
+
+  updateShapeGradient: (id, gradient) => {
+    set((state) => ({
+      ...pushHistory(state),
+      layers: state.layers.map((layer) =>
+        layer.id === id && layer.type === 'shape'
+          ? { ...layer, gradient: { ...layer.gradient, ...gradient } }
+          : layer,
       ),
     }))
   },

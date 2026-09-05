@@ -11,7 +11,7 @@ import {
   saveToLocalStorage,
   exportProjectFile,
 } from '../../utils/canvasSerialization'
-import { buildBorderProps, buildShadow, centerFromTopLeft, isLayerLocked, isLayerVisible } from './canvasHelpers'
+import { buildBorderProps, buildFill, buildShadow, centerFromTopLeft, isLayerLocked, isLayerVisible } from './canvasHelpers'
 import './Canvas.css'
 
 export interface CanvasHandle {
@@ -126,8 +126,6 @@ const applyImageLayer = (obj: fabric.FabricImage, layer: ImageLayer, folders: La
   applyCommonTransform(obj, layer, folders)
 }
 
-// A line has no fillable area — the stored `fill` is kept on the layer (in
-// case it's ever reused for something else) but never applied to the object.
 const applyShapeStyle = (obj: fabric.Object, layer: ShapeLayer, folders: LayerFolder[]) => {
   if (layer.shape === 'ellipse') {
     ;(obj as fabric.Ellipse).set({ rx: layer.width / 2, ry: layer.height / 2 })
@@ -137,7 +135,7 @@ const applyShapeStyle = (obj: fabric.Object, layer: ShapeLayer, folders: LayerFo
     obj.set({ width: layer.width, height: layer.height })
   }
   obj.set({
-    fill: layer.shape === 'line' ? '' : layer.fill,
+    fill: buildFill(layer),
     stroke: layer.stroke,
     strokeWidth: layer.strokeWidth,
   })
@@ -154,7 +152,7 @@ const createShapeObject = (layer: ShapeLayer, folders: LayerFolder[]): fabric.Ob
     left: centerX,
     top: centerY,
     angle: layer.rotation,
-    fill: layer.shape === 'line' ? '' : layer.fill,
+    fill: buildFill(layer),
     stroke: layer.stroke,
     strokeWidth: layer.strokeWidth,
     opacity: layer.opacity,

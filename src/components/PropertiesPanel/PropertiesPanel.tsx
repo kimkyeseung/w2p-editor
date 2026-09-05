@@ -44,6 +44,7 @@ export function PropertiesPanel() {
   const flipLayer = useEditorStore((s) => s.flipLayer)
   const updateTextStyle = useEditorStore((s) => s.updateTextStyle)
   const updateShapeStyle = useEditorStore((s) => s.updateShapeStyle)
+  const updateShapeGradient = useEditorStore((s) => s.updateShapeGradient)
   const renameLayer = useEditorStore((s) => s.renameLayer)
   const alignLayer = useEditorStore((s) => s.alignLayer)
   const alignLayers = useEditorStore((s) => s.alignLayers)
@@ -367,11 +368,71 @@ export function PropertiesPanel() {
         <div className="prop-section">
           <span className="prop-section-title">도형</span>
           {shapeLayer.shape !== 'line' && (
-            <ColorField
-              label="채우기"
-              value={shapeLayer.fill}
-              onChange={(color) => updateShapeStyle(shapeLayer.id, { fill: color })}
-            />
+            <>
+              {!shapeLayer.gradient.enabled && (
+                <ColorField
+                  label="채우기"
+                  value={shapeLayer.fill}
+                  onChange={(color) => updateShapeStyle(shapeLayer.id, { fill: color })}
+                />
+              )}
+              <label className="prop-field prop-field-checkbox">
+                <input
+                  type="checkbox"
+                  checked={shapeLayer.gradient.enabled}
+                  onChange={(e) => updateShapeGradient(shapeLayer.id, { enabled: e.target.checked })}
+                />
+                <span>그라디언트</span>
+              </label>
+              {shapeLayer.gradient.enabled && (
+                <>
+                  <div className="prop-align-grid prop-align-text prop-cols-2">
+                    <button
+                      type="button"
+                      className={shapeLayer.gradient.type === 'linear' ? 'is-active' : ''}
+                      onClick={() => updateShapeGradient(shapeLayer.id, { type: 'linear' })}
+                    >
+                      선형
+                    </button>
+                    <button
+                      type="button"
+                      className={shapeLayer.gradient.type === 'radial' ? 'is-active' : ''}
+                      onClick={() => updateShapeGradient(shapeLayer.id, { type: 'radial' })}
+                    >
+                      방사형
+                    </button>
+                  </div>
+                  {shapeLayer.gradient.type === 'linear' && (
+                    <NumberField
+                      label="각도"
+                      value={shapeLayer.gradient.angle}
+                      suffix="°"
+                      onCommit={(v) => updateShapeGradient(shapeLayer.id, { angle: v })}
+                    />
+                  )}
+                  <div className="prop-grid">
+                    <ColorField
+                      label="시작 색상"
+                      value={shapeLayer.gradient.colorStops[0]}
+                      onChange={(color) =>
+                        updateShapeGradient(shapeLayer.id, {
+                          colorStops: [color, shapeLayer.gradient.colorStops[1]],
+                        })
+                      }
+                    />
+                    <ColorField
+                      label="끝 색상"
+                      value={shapeLayer.gradient.colorStops[1]}
+                      onChange={(color) =>
+                        updateShapeGradient(shapeLayer.id, {
+                          colorStops: [shapeLayer.gradient.colorStops[0], color],
+                        })
+                      }
+                    />
+                  </div>
+                </>
+              )}
+            </>
           )}
           <ColorField
             label="선 색상"

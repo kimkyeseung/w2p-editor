@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import * as fabric from 'fabric'
-import { buildBorderProps, buildShadow, isLayerLocked, isLayerVisible } from './canvasHelpers'
-import type { LayerBorder, LayerShadow } from '../../types/editor'
+import { buildBorderProps, buildFill, buildShadow, isLayerLocked, isLayerVisible } from './canvasHelpers'
+import type { LayerBorder, LayerGradient, LayerShadow, ShapeLayer } from '../../types/editor'
 
 describe('buildShadow', () => {
   it('returns null when the shadow is disabled', () => {
@@ -29,6 +29,69 @@ describe('buildBorderProps', () => {
   it('applies the stored color/width when enabled', () => {
     const border: LayerBorder = { enabled: true, color: '#00ff00', width: 6 }
     expect(buildBorderProps(border)).toEqual({ stroke: '#00ff00', strokeWidth: 6 })
+  })
+})
+
+describe('buildFill', () => {
+  const solidGradient: LayerGradient = { enabled: false, type: 'linear', angle: 90, colorStops: ['#000000', '#ffffff'] }
+
+  it('returns the plain solid fill when the gradient is disabled', () => {
+    const layer: Pick<ShapeLayer, 'fill' | 'gradient' | 'shape'> = {
+      fill: '#ff6600',
+      gradient: solidGradient,
+      shape: 'rectangle',
+    }
+    expect(buildFill(layer)).toBe('#ff6600')
+  })
+
+  it('returns an empty string for a line regardless of gradient state', () => {
+    const layer: Pick<ShapeLayer, 'fill' | 'gradient' | 'shape'> = {
+      fill: '#ff6600',
+      gradient: { ...solidGradient, enabled: true },
+      shape: 'line',
+    }
+    expect(buildFill(layer)).toBe('')
+  })
+
+  it('builds a linear fabric.Gradient with the stored color stops', () => {
+    const layer: Pick<ShapeLayer, 'fill' | 'gradient' | 'shape'> = {
+      fill: '#ff6600',
+      gradient: { enabled: true, type: 'linear', angle: 90, colorStops: ['#111111', '#eeeeee'] },
+      shape: 'rectangle',
+    }
+    const result = buildFill(layer)
+    expect(result).toBeInstanceOf(fabric.Gradient)
+    const gradient = result as fabric.Gradient<'linear'>
+    expect(gradient.type).toBe('linear')
+    expect(gradient.gradientUnits).toBe('percentage')
+    expect(gradient.colorStops).toEqual([
+      { offset: 0, color: '#111111' },
+      { offset: 1, color: '#eeeeee' },
+    ])
+  })
+
+  it('points a 0deg linear gradient horizontally, left to right', () => {
+    const layer: Pick<ShapeLayer, 'fill' | 'gradient' | 'shape'> = {
+      fill: '#ff6600',
+      gradient: { enabled: true, type: 'linear', angle: 0, colorStops: ['#111111', '#eeeeee'] },
+      shape: 'rectangle',
+    }
+    const gradient = buildFill(layer) as fabric.Gradient<'linear'>
+    expect(gradient.coords.y1).toBeCloseTo(gradient.coords.y2)
+    expect(gradient.coords.x1).toBeLessThan(gradient.coords.x2)
+  })
+
+  it('builds a radial fabric.Gradient centered on the shape', () => {
+    const layer: Pick<ShapeLayer, 'fill' | 'gradient' | 'shape'> = {
+      fill: '#ff6600',
+      gradient: { enabled: true, type: 'radial', angle: 0, colorStops: ['#111111', '#eeeeee'] },
+      shape: 'ellipse',
+    }
+    const result = buildFill(layer)
+    expect(result).toBeInstanceOf(fabric.Gradient)
+    const gradient = result as fabric.Gradient<'radial'>
+    expect(gradient.type).toBe('radial')
+    expect(gradient.coords).toEqual({ x1: 0.5, y1: 0.5, r1: 0, x2: 0.5, y2: 0.5, r2: 0.5 })
   })
 })
 

@@ -77,10 +77,24 @@ export interface ImageLayer extends LayerBase {
 
 export type ShapeKind = 'rectangle' | 'ellipse' | 'triangle' | 'line'
 
+// Kept as a single required object (same reasoning as LayerShadow/LayerBorder)
+// so toggling the gradient off and back on preserves the last stops/angle
+// instead of resetting to defaults. When disabled, ShapeLayer.fill (a plain
+// solid color) is used instead — the two are mutually exclusive, not layered.
+export interface LayerGradient {
+  enabled: boolean
+  type: 'linear' | 'radial'
+  // Degrees; only meaningful for 'linear' (a 'radial' gradient has no
+  // direction, it always radiates from the shape's center).
+  angle: number
+  colorStops: [string, string]
+}
+
 export interface ShapeLayer extends LayerBase {
   type: 'shape'
   shape: ShapeKind
   fill: string
+  gradient: LayerGradient
   stroke: string
   strokeWidth: number
 }
