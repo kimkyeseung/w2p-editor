@@ -125,6 +125,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       fontSize: 24,
       color: '#111111',
       align: 'left',
+      fontWeight: 'normal',
+      fontStyle: 'normal',
     }
     set((state) => ({
       ...pushHistory(state),

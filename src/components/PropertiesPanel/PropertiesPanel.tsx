@@ -138,6 +138,32 @@ export function PropertiesPanel() {
             value={textLayer.fontSize}
             onCommit={(v) => updateTextStyle(textLayer.id, { fontSize: Math.max(1, v) })}
           />
+          <div className="prop-align-grid prop-align-text prop-cols-2">
+            <button
+              type="button"
+              className={textLayer.fontWeight === 'bold' ? 'is-active' : ''}
+              style={{ fontWeight: 'bold' }}
+              onClick={() =>
+                updateTextStyle(textLayer.id, {
+                  fontWeight: textLayer.fontWeight === 'bold' ? 'normal' : 'bold',
+                })
+              }
+            >
+              굵게
+            </button>
+            <button
+              type="button"
+              className={textLayer.fontStyle === 'italic' ? 'is-active' : ''}
+              style={{ fontStyle: 'italic' }}
+              onClick={() =>
+                updateTextStyle(textLayer.id, {
+                  fontStyle: textLayer.fontStyle === 'italic' ? 'normal' : 'italic',
+                })
+              }
+            >
+              기울임
+            </button>
+          </div>
           <label className="prop-field">
             <span>색상</span>
             <input

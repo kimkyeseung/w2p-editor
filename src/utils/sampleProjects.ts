@@ -19,6 +19,8 @@ const textLayer = (
   fontSize: 14,
   color: '#111827',
   align: 'left',
+  fontWeight: 'normal',
+  fontStyle: 'normal',
   ...overrides,
 })
 

@@ -67,6 +67,10 @@
   gap: 0.35rem;
 }
 
+.prop-align-grid.prop-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .prop-align-grid button {
   font-size: 0.75rem;
   padding: 0.4rem 0.3rem;

@@ -32,6 +32,8 @@ export interface TextLayer extends LayerBase {
   fontSize: number
   color: string
   align: 'left' | 'center' | 'right'
+  fontWeight: 'normal' | 'bold'
+  fontStyle: 'normal' | 'italic'
 }
 
 export interface ImageLayer extends LayerBase {
