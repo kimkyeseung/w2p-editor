@@ -44,6 +44,8 @@ function App() {
   const folders = useEditorStore((s) => s.folders)
   const presetId = useEditorStore((s) => s.presetId)
   const replaceAll = useEditorStore((s) => s.replaceAll)
+  const drawMode = useEditorStore((s) => s.drawMode)
+  const setDrawMode = useEditorStore((s) => s.setDrawMode)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -63,6 +65,10 @@ function App() {
         repeatLastTransform()
         return
       }
+      if (e.key === 'Escape' && drawMode !== 'none') {
+        setDrawMode('none')
+        return
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
         e.preventDefault()
         removeLayers(selectedIds)
@@ -70,7 +76,7 @@ function App() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo, removeLayers, repeatLastTransform, selectedIds])
+  }, [undo, redo, removeLayers, repeatLastTransform, selectedIds, drawMode, setDrawMode])
 
   const handleOpenMockup = () => {
     const dataUrl = canvasHandleRef.current?.getDesignDataUrl()

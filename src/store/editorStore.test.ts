@@ -19,6 +19,9 @@ beforeEach(() => {
       past: [],
       future: [],
       recentColors: [],
+      drawMode: 'none',
+      drawColor: '#111827',
+      drawWidth: 4,
     },
     true,
   )
@@ -708,5 +711,82 @@ describe('replaceLayersWithImage', () => {
     useEditorStore.getState().replaceLayersWithImage([], { src: 'x', x: 0, y: 0, width: 10, height: 10 })
 
     expect(useEditorStore.getState().layers).toBe(before)
+  })
+})
+
+describe('drawMode / drawColor / drawWidth', () => {
+  it('setDrawMode switches the active brush', () => {
+    useEditorStore.getState().setDrawMode('circle')
+    expect(useEditorStore.getState().drawMode).toBe('circle')
+  })
+
+  it('setDrawWidth clamps to a minimum of 1', () => {
+    useEditorStore.getState().setDrawWidth(-5)
+    expect(useEditorStore.getState().drawWidth).toBe(1)
+  })
+
+  it('is not undoable — a tool setting, not document content', () => {
+    useEditorStore.getState().setDrawMode('spray')
+    useEditorStore.getState().setDrawColor('#ff0000')
+    expect(useEditorStore.getState().past).toHaveLength(0)
+  })
+})
+
+describe('addPathLayer / updatePathStyle', () => {
+  const SAMPLE_PATH = [
+    ['M', 0, 0],
+    ['L', 10, 10],
+  ]
+
+  it('creates a path layer with the given command data, geometry and style', () => {
+    useEditorStore.getState().addPathLayer(
+      SAMPLE_PATH,
+      { x: 5, y: 6, width: 100, height: 80 },
+      { stroke: '#111827', strokeWidth: 4 },
+    )
+
+    const layer = useEditorStore.getState().layers[0]
+    expect(layer).toMatchObject({
+      type: 'path',
+      path: SAMPLE_PATH,
+      x: 5,
+      y: 6,
+      width: 100,
+      height: 80,
+      stroke: '#111827',
+      strokeWidth: 4,
+      fill: '',
+    })
+  })
+
+  it('selects the new path layer', () => {
+    useEditorStore
+      .getState()
+      .addPathLayer(SAMPLE_PATH, { x: 0, y: 0, width: 10, height: 10 }, { stroke: '#000', strokeWidth: 1 })
+
+    const id = useEditorStore.getState().layers[0].id
+    expect(useEditorStore.getState().selectedId).toBe(id)
+  })
+
+  it('is undoable in a single step', () => {
+    useEditorStore
+      .getState()
+      .addPathLayer(SAMPLE_PATH, { x: 0, y: 0, width: 10, height: 10 }, { stroke: '#000', strokeWidth: 1 })
+    expect(useEditorStore.getState().layers).toHaveLength(1)
+
+    useEditorStore.getState().undo()
+    expect(useEditorStore.getState().layers).toHaveLength(0)
+  })
+
+  it('updatePathStyle changes stroke/strokeWidth/fill on the target path layer only', () => {
+    useEditorStore
+      .getState()
+      .addPathLayer(SAMPLE_PATH, { x: 0, y: 0, width: 10, height: 10 }, { stroke: '#000', strokeWidth: 1 })
+    const id = useEditorStore.getState().layers[0].id
+
+    useEditorStore.getState().updatePathStyle(id, { stroke: '#e11d48', strokeWidth: 6 })
+
+    const layer = useEditorStore.getState().layers.find((l) => l.id === id)
+    expect(layer).toMatchObject({ stroke: '#e11d48', strokeWidth: 6 })
   })
 })

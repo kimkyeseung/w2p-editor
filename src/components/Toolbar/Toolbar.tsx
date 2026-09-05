@@ -16,6 +16,7 @@ import {
   LayoutGridIcon,
   LineShapeIcon,
   MockupIcon,
+  PenToolIcon,
   RectangleShapeIcon,
   RedoIcon,
   RepeatTransformIcon,
@@ -26,8 +27,15 @@ import {
 } from '../common/icons'
 import { DropdownMenu } from './DropdownMenu'
 import type { CanvasHandle } from '../Canvas/Canvas'
+import type { DrawMode } from '../../store/editorStore'
 import type { ShapeKind } from '../../types/editor'
 import './Toolbar.css'
+
+const BRUSH_BUTTONS: { mode: Exclude<DrawMode, 'none'>; label: string }[] = [
+  { mode: 'pencil', label: '펜' },
+  { mode: 'circle', label: '원형' },
+  { mode: 'spray', label: '스프레이' },
+]
 
 const SHAPE_BUTTONS: { kind: ShapeKind; label: string; Icon: typeof RectangleShapeIcon }[] = [
   { kind: 'rectangle', label: '사각형', Icon: RectangleShapeIcon },
@@ -61,6 +69,12 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
   const canRedo = useEditorStore((s) => s.future.length > 0)
   const repeatLastTransform = useEditorStore((s) => s.repeatLastTransform)
   const canRepeatTransform = useEditorStore((s) => s.lastTransform !== null && s.selectedIds.length > 0)
+  const drawMode = useEditorStore((s) => s.drawMode)
+  const setDrawMode = useEditorStore((s) => s.setDrawMode)
+  const drawColor = useEditorStore((s) => s.drawColor)
+  const setDrawColor = useEditorStore((s) => s.setDrawColor)
+  const drawWidth = useEditorStore((s) => s.drawWidth)
+  const setDrawWidth = useEditorStore((s) => s.setDrawWidth)
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -167,6 +181,51 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
             <Icon />
           </button>
         ))}
+      </div>
+
+      <div className="toolbar-divider" />
+
+      <div className="toolbar-group toolbar-segment">
+        <button
+          type="button"
+          className={`toolbar-icon-btn ${drawMode !== 'none' ? 'is-active' : ''}`}
+          title="자유 그리기 (펜/브러시)"
+          onClick={() => setDrawMode(drawMode === 'none' ? 'pencil' : 'none')}
+        >
+          <PenToolIcon />
+        </button>
+        {drawMode !== 'none' && (
+          <>
+            <span className="toolbar-segment-divider" />
+            {BRUSH_BUTTONS.map(({ mode, label }) => (
+              <button
+                key={mode}
+                type="button"
+                className={`toolbar-text-btn ${drawMode === mode ? 'is-active' : ''}`}
+                onClick={() => setDrawMode(mode)}
+              >
+                {label}
+              </button>
+            ))}
+            <span className="toolbar-segment-divider" />
+            <input
+              type="color"
+              className="toolbar-color-input"
+              aria-label="브러시 색상"
+              value={drawColor}
+              onChange={(e) => setDrawColor(e.target.value)}
+            />
+            <input
+              type="number"
+              className="toolbar-number-input"
+              aria-label="브러시 굵기"
+              min={1}
+              max={100}
+              value={drawWidth}
+              onChange={(e) => setDrawWidth(Number(e.target.value) || 1)}
+            />
+          </>
+        )}
       </div>
 
       <div className="toolbar-divider" />

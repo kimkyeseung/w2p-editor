@@ -1,9 +1,18 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import * as fabric from 'fabric'
+import type { TComplexPathData } from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
 import { ROTATE_CURSOR } from '../../utils/cursors'
-import type { EditorGuide, EditorLayer, ImageLayer, LayerFolder, ShapeLayer, TextLayer } from '../../types/editor'
+import type {
+  EditorGuide,
+  EditorLayer,
+  ImageLayer,
+  LayerFolder,
+  PathLayer,
+  ShapeLayer,
+  TextLayer,
+} from '../../types/editor'
 import {
   exportCanvasAsPng,
   importProjectFile,
@@ -51,7 +60,7 @@ const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer, fold
     visible,
     opacity: layer.opacity,
     shadow: buildShadow(layer.shadow),
-    ...(layer.type === 'shape' ? {} : buildBorderProps(layer.border)),
+    ...(layer.type === 'shape' || layer.type === 'path' ? {} : buildBorderProps(layer.border)),
     flipX: layer.flipX,
     flipY: layer.flipY,
     globalCompositeOperation: layer.blendMode,
@@ -191,6 +200,52 @@ const createShapeObject = (layer: ShapeLayer, folders: LayerFolder[]): fabric.Ob
   return obj
 }
 
+// A path's own `width`/`height` come from its command data's bounding box
+// and never change after the stroke is drawn — so, like an image's natural
+// pixel size, matching the stored layer.width/height is purely a matter of
+// scale, not of touching the path data itself.
+const applyPathStyle = (obj: fabric.Path, layer: PathLayer, folders: LayerFolder[]) => {
+  const baseWidth = obj.width || 1
+  const baseHeight = obj.height || 1
+  obj.set({
+    scaleX: layer.width / baseWidth,
+    scaleY: layer.height / baseHeight,
+    fill: layer.fill || '',
+    stroke: layer.stroke,
+    strokeWidth: layer.strokeWidth,
+  })
+  applyCommonTransform(obj, layer, folders)
+}
+
+const createPathObject = (layer: PathLayer, folders: LayerFolder[]): fabric.Path => {
+  const { centerX, centerY } = centerFromTopLeft(layer)
+  const visible = isLayerVisible(layer, folders)
+  const locked = isLayerLocked(layer, folders)
+  const obj = new fabric.Path(layer.path as TComplexPathData, {
+    originX: 'center',
+    originY: 'center',
+    left: centerX,
+    top: centerY,
+    angle: layer.rotation,
+    fill: layer.fill || '',
+    stroke: layer.stroke,
+    strokeWidth: layer.strokeWidth,
+    opacity: layer.opacity,
+    shadow: buildShadow(layer.shadow),
+    flipX: layer.flipX,
+    flipY: layer.flipY,
+    globalCompositeOperation: layer.blendMode,
+    visible,
+    selectable: !locked && visible,
+    evented: !locked && visible,
+  })
+  const baseWidth = obj.width || 1
+  const baseHeight = obj.height || 1
+  obj.set({ scaleX: layer.width / baseWidth, scaleY: layer.height / baseHeight })
+  applyRotateCursor(obj)
+  return obj
+}
+
 // Renders the given layers (in their original z-order) onto a detached,
 // off-DOM canvas sized to their combined bounding box, then exports that as
 // a single PNG data URL — the raw material for "flatten selection". Reuses
@@ -229,6 +284,8 @@ const buildFlattenedImage = async (
       obj = createTextObject(layer, folders)
     } else if (layer.type === 'shape') {
       obj = createShapeObject(layer, folders)
+    } else if (layer.type === 'path') {
+      obj = createPathObject(layer, folders)
     } else {
       try {
         const img = await fabric.FabricImage.fromURL(layer.src)
@@ -245,7 +302,12 @@ const buildFlattenedImage = async (
 
     const maskLayer = layer.clipPathId ? layers.find((l) => l.id === layer.clipPathId) : undefined
     if (maskLayer && maskLayer.type !== 'image') {
-      const clipObj = maskLayer.type === 'text' ? createTextObject(maskLayer, folders) : createShapeObject(maskLayer, folders)
+      const clipObj =
+        maskLayer.type === 'text'
+          ? createTextObject(maskLayer, folders)
+          : maskLayer.type === 'path'
+            ? createPathObject(maskLayer, folders)
+            : createShapeObject(maskLayer, folders)
       clipObj.absolutePositioned = true
       clipObj.set({ left: (clipObj.left ?? 0) - box.minX, top: (clipObj.top ?? 0) - box.minY })
       obj.set({ clipPath: clipObj })
@@ -362,6 +424,9 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const applyCanvasModification = useEditorStore((s) => s.applyCanvasModification)
   const replaceAll = useEditorStore((s) => s.replaceAll)
   const replaceLayersWithImage = useEditorStore((s) => s.replaceLayersWithImage)
+  const drawMode = useEditorStore((s) => s.drawMode)
+  const drawColor = useEditorStore((s) => s.drawColor)
+  const drawWidth = useEditorStore((s) => s.drawWidth)
 
   const preset = useMemo(() => getPresetById(presetId), [presetId])
   const bleedPx = mmToPx(preset.bleedMm)
@@ -766,12 +831,38 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     }
     const handleSelectionCleared = () => selectLayers([])
 
+    // A finished freehand stroke arrives as a fully-formed Fabric object
+    // Fabric already added to the canvas itself — remove that raw one and
+    // hand its data to the store instead, so the *next* reconciliation pass
+    // creates the "real" object via createPathObject like every other layer
+    // (keeping idToObject/objectToId in sync, which this raw object bypassed).
+    const handlePathCreated = (e: { path?: fabric.FabricObject }) => {
+      const path = e.path as fabric.Path | undefined
+      if (!path) return
+      const topLeft = topLeftFromObject(path)
+      canvas.remove(path)
+      useEditorStore.getState().addPathLayer(
+        path.path,
+        {
+          x: Math.round(topLeft.x),
+          y: Math.round(topLeft.y),
+          width: Math.round(topLeft.width),
+          height: Math.round(topLeft.height),
+        },
+        {
+          stroke: (path.stroke as string) || useEditorStore.getState().drawColor,
+          strokeWidth: path.strokeWidth ?? useEditorStore.getState().drawWidth,
+        },
+      )
+    }
+
     canvas.on('object:modified', handleModified)
     canvas.on('object:moving', handleObjectMoving)
     canvas.on('mouse:up', clearAlignGuides)
     canvas.on('selection:created', handleSelectionChange)
     canvas.on('selection:updated', handleSelectionChange)
     canvas.on('selection:cleared', handleSelectionCleared)
+    canvas.on('path:created', handlePathCreated)
 
     return () => {
       canvas.dispose()
@@ -782,6 +873,26 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Drawing-mode toggle and brush settings are ephemeral store state (see
+  // the drawMode comment in editorStore.ts) rather than per-layer data, so
+  // they're pushed onto the canvas directly here instead of going through
+  // the layer reconciliation effect.
+  useEffect(() => {
+    const canvas = fabricRef.current
+    if (!canvas) return
+    canvas.isDrawingMode = drawMode !== 'none'
+    if (drawMode === 'none') return
+    const brush =
+      drawMode === 'circle'
+        ? new fabric.CircleBrush(canvas)
+        : drawMode === 'spray'
+          ? new fabric.SprayBrush(canvas)
+          : new fabric.PencilBrush(canvas)
+    brush.color = drawColor
+    brush.width = drawWidth
+    canvas.freeDrawingBrush = brush
+  }, [drawMode, drawColor, drawWidth])
 
   // Explicitly trigger the Korean web fonts to download, then force one
   // re-render once they land (see WEB_FONT_FAMILIES comment above).
@@ -913,6 +1024,8 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
           applyImageLayer(existing as fabric.FabricImage, layer, folders)
         } else if (layer.type === 'shape') {
           applyShapeStyle(existing, layer, folders)
+        } else if (layer.type === 'path') {
+          applyPathStyle(existing as fabric.Path, layer, folders)
         }
         canvas.moveObjectTo(existing, index)
         return
@@ -926,6 +1039,12 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
         canvas.moveObjectTo(obj, index)
       } else if (layer.type === 'shape') {
         const obj = createShapeObject(layer, folders)
+        idToObject.current.set(layer.id, obj)
+        objectToId.current.set(obj, layer.id)
+        canvas.add(obj)
+        canvas.moveObjectTo(obj, index)
+      } else if (layer.type === 'path') {
+        const obj = createPathObject(layer, folders)
         idToObject.current.set(layer.id, obj)
         objectToId.current.set(obj, layer.id)
         canvas.add(obj)
@@ -971,7 +1090,12 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
         if (obj.clipPath) obj.set({ clipPath: undefined })
         return
       }
-      const clipObj = maskLayer.type === 'text' ? createTextObject(maskLayer, folders) : createShapeObject(maskLayer, folders)
+      const clipObj =
+        maskLayer.type === 'text'
+          ? createTextObject(maskLayer, folders)
+          : maskLayer.type === 'path'
+            ? createPathObject(maskLayer, folders)
+            : createShapeObject(maskLayer, folders)
       clipObj.absolutePositioned = true
       obj.set({ clipPath: clipObj })
     })

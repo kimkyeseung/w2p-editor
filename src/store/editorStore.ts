@@ -7,6 +7,8 @@ import type {
   LayerFolder,
   LayerGradient,
   LayerShadow,
+  PathCommand,
+  PathLayer,
   ShapeKind,
   ShapeLayer,
   TextLayer,
@@ -15,6 +17,8 @@ import { DEFAULT_PRESET_ID, getPresetById, mmToPx } from '../utils/presets'
 
 const RECENT_COLORS_KEY = 'w2p-recent-colors'
 const MAX_RECENT_COLORS = 12
+
+export type DrawMode = 'none' | 'pencil' | 'circle' | 'spray'
 
 const loadRecentColors = (): string[] => {
   try {
@@ -75,11 +79,31 @@ interface EditorState {
   // scope — and is meta-state about the editing session rather than
   // document content, so it's excluded from undo history.
   lastTransform: { dx: number; dy: number; dRotation: number } | null
+  // Freehand drawing tool state — which brush is active (if any) and its
+  // current color/width. Meta-state about the editing session rather than
+  // document content (same reasoning as `lastTransform`), so it's excluded
+  // from undo history and not persisted; a stroke itself becomes a normal
+  // undoable PathLayer once drawn (see addPathLayer).
+  drawMode: DrawMode
+  drawColor: string
+  drawWidth: number
 
   setPreset: (presetId: string) => void
   addTextLayer: () => void
   addImageLayer: (src: string, width: number, height: number) => void
   addShapeLayer: (shape: ShapeKind) => void
+  setDrawMode: (mode: DrawMode) => void
+  setDrawColor: (color: string) => void
+  setDrawWidth: (width: number) => void
+  // Commits one finished freehand stroke (Fabric's `path:created`) as a new
+  // layer — `path` is the raw command array straight off the Fabric object,
+  // and the geometry is its on-canvas bounding box (see Canvas.tsx).
+  addPathLayer: (
+    path: PathCommand[],
+    geometry: { x: number; y: number; width: number; height: number },
+    style: { stroke: string; strokeWidth: number },
+  ) => void
+  updatePathStyle: (id: string, style: Partial<Pick<PathLayer, 'stroke' | 'strokeWidth' | 'fill'>>) => void
   updateLayerTransform: (
     id: string,
     transform: Partial<Pick<EditorLayer, 'x' | 'y' | 'width' | 'height' | 'rotation' | 'opacity' | 'blendMode'>>,
@@ -190,6 +214,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   future: [],
   recentColors: loadRecentColors(),
   lastTransform: null,
+  drawMode: 'none',
+  drawColor: '#111827',
+  drawWidth: 4,
 
   setPreset: (presetId) => {
     set((state) => ({ ...pushHistory(state), presetId }))
@@ -304,6 +331,51 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       layers: [...state.layers, newLayer],
       selectedId: id,
       selectedIds: [id],
+    }))
+  },
+
+  setDrawMode: (mode) => set({ drawMode: mode }),
+  setDrawColor: (color) => set({ drawColor: color }),
+  setDrawWidth: (width) => set({ drawWidth: Math.max(1, width) }),
+
+  addPathLayer: (path, geometry, style) => {
+    const id = createId()
+    const newLayer: PathLayer = {
+      id,
+      type: 'path',
+      name: `그리기 ${get().layers.filter((l) => l.type === 'path').length + 1}`,
+      locked: false,
+      visible: true,
+      x: geometry.x,
+      y: geometry.y,
+      width: geometry.width,
+      height: geometry.height,
+      rotation: 0,
+      opacity: 1,
+      shadow: { enabled: false, color: '#000000', blur: 10, offsetX: 5, offsetY: 5 },
+      border: { enabled: false, color: '#000000', width: 2 },
+      flipX: false,
+      flipY: false,
+      blendMode: 'source-over',
+      path,
+      stroke: style.stroke,
+      strokeWidth: style.strokeWidth,
+      fill: '',
+    }
+    set((state) => ({
+      ...pushHistory(state),
+      layers: [...state.layers, newLayer],
+      selectedId: id,
+      selectedIds: [id],
+    }))
+  },
+
+  updatePathStyle: (id, style) => {
+    set((state) => ({
+      ...pushHistory(state),
+      layers: state.layers.map((layer) =>
+        layer.id === id && layer.type === 'path' ? { ...layer, ...style } : layer,
+      ),
     }))
   },
 

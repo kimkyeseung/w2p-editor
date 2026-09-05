@@ -409,6 +409,21 @@ export function MergeIcon({ className }: IconProps) {
   )
 }
 
+export function PenToolIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path
+        d="M2 12C3.2 8.5 4.4 6.5 5.6 9.2C6.8 12 8 4 9.4 7.2C10.4 9.5 11.4 6.5 13.5 3.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="13.5" cy="3.5" r="1.2" fill="currentColor" />
+    </svg>
+  )
+}
+
 export function ChevronDownIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

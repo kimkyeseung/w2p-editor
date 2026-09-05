@@ -15,6 +15,7 @@ import {
   LineShapeIcon,
   LockIcon,
   MergeIcon,
+  PenToolIcon,
   RectangleShapeIcon,
   SendBackIcon,
   TrashIcon,
@@ -144,6 +145,8 @@ function LayerRow({ layer, indented, showReorder, isMask }: LayerRowProps) {
             const ShapeIcon = SHAPE_ICONS[layer.shape]
             return <ShapeIcon />
           })()
+        ) : layer.type === 'path' ? (
+          <PenToolIcon />
         ) : (
           <ImageIcon />
         )}

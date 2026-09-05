@@ -1,4 +1,4 @@
-export type LayerType = 'text' | 'image' | 'shape'
+export type LayerType = 'text' | 'image' | 'shape' | 'path'
 
 // Kept as a single required object (rather than an optional `shadow?`) so
 // toggling the effect off and back on preserves the last color/blur/offset
@@ -115,7 +115,26 @@ export interface ShapeLayer extends LayerBase {
   strokeWidth: number
 }
 
-export type EditorLayer = TextLayer | ImageLayer | ShapeLayer
+// One Fabric Path command, e.g. ['M', 10, 20] or ['Q', 15, 5, 20, 20] — kept
+// as the raw array form (rather than re-serialized to an SVG path string)
+// since that's exactly what `fabric.Path`'s constructor and a freehand
+// stroke's own `.path` property both use, so no parsing is needed either way.
+export type PathCommand = (string | number)[]
+
+// A freehand stroke (Fabric's PencilBrush/CircleBrush/SprayBrush output),
+// captured on `path:created` and stored as its own layer like any other
+// drawable object — see the drawing-mode wiring in Canvas.tsx. `fill` is
+// almost always '' (brush strokes are outline-only) but kept editable for
+// the rare case of a closed loop the user wants filled in.
+export interface PathLayer extends LayerBase {
+  type: 'path'
+  path: PathCommand[]
+  stroke: string
+  strokeWidth: number
+  fill: string
+}
+
+export type EditorLayer = TextLayer | ImageLayer | ShapeLayer | PathLayer
 
 export interface CanvasPreset {
   id: string

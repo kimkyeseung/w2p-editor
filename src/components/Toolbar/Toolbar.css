@@ -149,6 +149,54 @@
   transform: scale(0.94);
 }
 
+.toolbar-icon-btn.is-active {
+  background: var(--tb-accent);
+  color: var(--tb-accent-text);
+}
+
+.toolbar-icon-btn.is-active:hover:not(:disabled) {
+  background: var(--tb-accent-hover);
+  color: var(--tb-accent-text);
+}
+
+.toolbar-text-btn {
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--tb-text-muted);
+}
+
+.toolbar-text-btn:hover:not(:disabled) {
+  background: var(--tb-bg-hover);
+  color: var(--tb-text);
+}
+
+.toolbar-text-btn.is-active {
+  background: var(--tb-accent);
+  color: var(--tb-accent-text);
+}
+
+.toolbar-color-input {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--tb-border);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.toolbar-number-input {
+  width: 42px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--tb-text);
+  background: var(--tb-bg-raised);
+  border: 1px solid var(--tb-border);
+  border-radius: 6px;
+  padding: 0.3rem 0.35rem;
+}
+
 /* ---------- Preset select ---------- */
 
 .toolbar-group:has(.toolbar-select) {

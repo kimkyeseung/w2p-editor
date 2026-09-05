@@ -1,7 +1,7 @@
 import { useEditorStore } from '../../store/editorStore'
 import { NumberField } from '../common/NumberField'
 import { ColorField } from '../common/ColorField'
-import type { ShapeLayer, TextLayer } from '../../types/editor'
+import type { PathLayer, ShapeLayer, TextLayer } from '../../types/editor'
 import './PropertiesPanel.css'
 
 const FONT_OPTIONS = [
@@ -45,6 +45,7 @@ export function PropertiesPanel() {
   const updateTextStyle = useEditorStore((s) => s.updateTextStyle)
   const updateShapeStyle = useEditorStore((s) => s.updateShapeStyle)
   const updateShapeGradient = useEditorStore((s) => s.updateShapeGradient)
+  const updatePathStyle = useEditorStore((s) => s.updatePathStyle)
   const renameLayer = useEditorStore((s) => s.renameLayer)
   const alignLayer = useEditorStore((s) => s.alignLayer)
   const alignLayers = useEditorStore((s) => s.alignLayers)
@@ -112,6 +113,7 @@ export function PropertiesPanel() {
 
   const textLayer = layer.type === 'text' ? (layer as TextLayer) : null
   const shapeLayer = layer.type === 'shape' ? (layer as ShapeLayer) : null
+  const pathLayer = layer.type === 'path' ? (layer as PathLayer) : null
 
   return (
     <div className="properties-panel">
@@ -249,7 +251,7 @@ export function PropertiesPanel() {
         )}
       </div>
 
-      {!shapeLayer && (
+      {!shapeLayer && !pathLayer && (
         <div className="prop-section">
           <label className="prop-field prop-field-checkbox">
             <input
@@ -443,6 +445,22 @@ export function PropertiesPanel() {
             label="선 굵기"
             value={shapeLayer.strokeWidth}
             onCommit={(v) => updateShapeStyle(shapeLayer.id, { strokeWidth: Math.max(0, v) })}
+          />
+        </div>
+      )}
+
+      {pathLayer && (
+        <div className="prop-section">
+          <span className="prop-section-title">그리기</span>
+          <ColorField
+            label="선 색상"
+            value={pathLayer.stroke}
+            onChange={(color) => updatePathStyle(pathLayer.id, { stroke: color })}
+          />
+          <NumberField
+            label="선 굵기"
+            value={pathLayer.strokeWidth}
+            onCommit={(v) => updatePathStyle(pathLayer.id, { strokeWidth: Math.max(0, v) })}
           />
         </div>
       )}
