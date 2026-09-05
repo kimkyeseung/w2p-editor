@@ -11,6 +11,26 @@ import type {
 } from '../types/editor'
 import { DEFAULT_PRESET_ID, getPresetById, mmToPx } from '../utils/presets'
 
+const RECENT_COLORS_KEY = 'w2p-recent-colors'
+const MAX_RECENT_COLORS = 12
+
+const loadRecentColors = (): string[] => {
+  try {
+    const raw = localStorage.getItem(RECENT_COLORS_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+const saveRecentColors = (colors: string[]) => {
+  try {
+    localStorage.setItem(RECENT_COLORS_KEY, JSON.stringify(colors))
+  } catch {
+    // Private browsing / storage full — swatches just won't persist.
+  }
+}
+
 interface HistoryEntry {
   layers: EditorLayer[]
   folders: LayerFolder[]
@@ -37,6 +57,10 @@ interface EditorState {
   presetId: string
   past: HistoryEntry[]
   future: HistoryEntry[]
+  // Shared across every color picker in the app and persisted to
+  // localStorage — a UI convenience, not document content, so it's
+  // excluded from undo history (same reasoning as toggleFolderCollapsed).
+  recentColors: string[]
 
   setPreset: (presetId: string) => void
   addTextLayer: () => void
@@ -49,6 +73,7 @@ interface EditorState {
   updateLayerShadow: (id: string, shadow: Partial<LayerShadow>) => void
   updateLayerBorder: (id: string, border: Partial<LayerBorder>) => void
   flipLayer: (id: string, axis: 'horizontal' | 'vertical') => void
+  addRecentColor: (color: string) => void
   updateTextStyle: (id: string, style: Partial<Omit<TextLayer, keyof EditorLayer | 'type'>>) => void
   updateShapeStyle: (id: string, style: Partial<Omit<ShapeLayer, keyof EditorLayer | 'type' | 'shape'>>) => void
   // Fabric fires one `object:modified` event for both a transform drag AND
@@ -114,6 +139,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   presetId: DEFAULT_PRESET_ID,
   past: [],
   future: [],
+  recentColors: loadRecentColors(),
 
   setPreset: (presetId) => {
     set((state) => ({ ...pushHistory(state), presetId }))
@@ -553,6 +579,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => ({
       folders: state.folders.map((f) => (f.id === id ? { ...f, collapsed: !f.collapsed } : f)),
     }))
+  },
+
+  addRecentColor: (color) => {
+    set((state) => {
+      const next = [color, ...state.recentColors.filter((c) => c.toLowerCase() !== color.toLowerCase())].slice(
+        0,
+        MAX_RECENT_COLORS,
+      )
+      saveRecentColors(next)
+      return { recentColors: next }
+    })
   },
 
   reorderFolder: (id, direction) => {

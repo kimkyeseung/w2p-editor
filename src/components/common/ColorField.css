@@ -1,0 +1,19 @@
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+}
+
+.color-swatch {
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+}
+
+.color-swatch:hover {
+  border-color: #9ca3af;
+}

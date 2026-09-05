@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-09-05T11:13:12.142Z",
+  "lastUpdated": "2026-09-05T11:18:49.274Z",
   "activeFeatures": [
     "w2p-editor",
     "w2p",
@@ -38,9 +38,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:40:10.127Z",
-        "lastUpdated": "2026-09-05T11:12:36.253Z"
+        "lastUpdated": "2026-09-05T11:17:58.996Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/utils/sampleProjects.ts"
+      "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/common/ColorField.tsx"
     },
     "store": {
       "phase": "do",
@@ -51,7 +51,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:41:19.891Z",
-        "lastUpdated": "2026-09-05T11:12:31.757Z"
+        "lastUpdated": "2026-09-05T11:17:43.574Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/store/editorStore.ts"
     },
@@ -103,7 +103,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-08-23T17:47:41.315Z",
-        "lastUpdated": "2026-09-05T11:13:12.142Z"
+        "lastUpdated": "2026-09-05T11:18:49.274Z"
       },
       "lastFile": "/Users/kimkyeseung/Documents/w2p/src/components/PropertiesPanel/PropertiesPanel.tsx"
     },
@@ -194,7 +194,7 @@
   "session": {
     "startedAt": "2026-08-23T17:34:29.048Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-09-05T11:13:12.142Z"
+    "lastActivity": "2026-09-05T11:18:49.274Z"
   },
   "history": [
     {
@@ -1915,6 +1915,72 @@
     },
     {
       "timestamp": "2026-09-05T11:13:12.142Z",
+      "feature": "PropertiesPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:17:15.976Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:17:23.227Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:17:29.209Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:17:33.897Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:17:43.574Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:17:58.996Z",
+      "feature": "w2p",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:18:22.491Z",
+      "feature": "PropertiesPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:18:27.863Z",
+      "feature": "PropertiesPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:18:33.110Z",
+      "feature": "PropertiesPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:18:40.102Z",
+      "feature": "PropertiesPanel",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-09-05T11:18:49.274Z",
       "feature": "PropertiesPanel",
       "phase": "do",
       "action": "updated"

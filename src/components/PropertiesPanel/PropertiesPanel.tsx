@@ -1,5 +1,6 @@
 import { useEditorStore } from '../../store/editorStore'
 import { NumberField } from '../common/NumberField'
+import { ColorField } from '../common/ColorField'
 import type { ShapeLayer, TextLayer } from '../../types/editor'
 import './PropertiesPanel.css'
 
@@ -183,14 +184,11 @@ export function PropertiesPanel() {
         </label>
         {layer.shadow.enabled && (
           <>
-            <label className="prop-field">
-              <span>그림자 색상</span>
-              <input
-                type="color"
-                value={layer.shadow.color}
-                onChange={(e) => updateLayerShadow(layer.id, { color: e.target.value })}
-              />
-            </label>
+            <ColorField
+              label="그림자 색상"
+              value={layer.shadow.color}
+              onChange={(color) => updateLayerShadow(layer.id, { color })}
+            />
             <NumberField
               label="흐림 정도"
               value={layer.shadow.blur}
@@ -224,14 +222,11 @@ export function PropertiesPanel() {
           </label>
           {layer.border.enabled && (
             <>
-              <label className="prop-field">
-                <span>테두리 색상</span>
-                <input
-                  type="color"
-                  value={layer.border.color}
-                  onChange={(e) => updateLayerBorder(layer.id, { color: e.target.value })}
-                />
-              </label>
+              <ColorField
+                label="테두리 색상"
+                value={layer.border.color}
+                onChange={(color) => updateLayerBorder(layer.id, { color })}
+              />
               <NumberField
                 label="테두리 굵기"
                 value={layer.border.width}
@@ -310,14 +305,11 @@ export function PropertiesPanel() {
               onCommit={(v) => updateTextStyle(textLayer.id, { lineHeight: Math.max(0.1, v) })}
             />
           </div>
-          <label className="prop-field">
-            <span>색상</span>
-            <input
-              type="color"
-              value={textLayer.color}
-              onChange={(e) => updateTextStyle(textLayer.id, { color: e.target.value })}
-            />
-          </label>
+          <ColorField
+            label="색상"
+            value={textLayer.color}
+            onChange={(color) => updateTextStyle(textLayer.id, { color })}
+          />
           <div className="prop-align-grid prop-align-text">
             {(['left', 'center', 'right'] as const).map((align) => (
               <button
@@ -337,23 +329,17 @@ export function PropertiesPanel() {
         <div className="prop-section">
           <span className="prop-section-title">도형</span>
           {shapeLayer.shape !== 'line' && (
-            <label className="prop-field">
-              <span>채우기</span>
-              <input
-                type="color"
-                value={shapeLayer.fill}
-                onChange={(e) => updateShapeStyle(shapeLayer.id, { fill: e.target.value })}
-              />
-            </label>
-          )}
-          <label className="prop-field">
-            <span>선 색상</span>
-            <input
-              type="color"
-              value={shapeLayer.stroke}
-              onChange={(e) => updateShapeStyle(shapeLayer.id, { stroke: e.target.value })}
+            <ColorField
+              label="채우기"
+              value={shapeLayer.fill}
+              onChange={(color) => updateShapeStyle(shapeLayer.id, { fill: color })}
             />
-          </label>
+          )}
+          <ColorField
+            label="선 색상"
+            value={shapeLayer.stroke}
+            onChange={(color) => updateShapeStyle(shapeLayer.id, { stroke: color })}
+          />
           <NumberField
             label="선 굵기"
             value={shapeLayer.strokeWidth}
