@@ -12,6 +12,7 @@ beforeEach(() => {
       ...initialState,
       layers: [],
       folders: [],
+      guides: [],
       selectedId: null,
       selectedIds: [],
       presetId: DEFAULT_PRESET_ID,
@@ -539,5 +540,63 @@ describe('setClipMask / removeClipMask', () => {
 
     useEditorStore.getState().undo()
     expect(useEditorStore.getState().layers.find((l) => l.id === targetId)!.clipPathId).toBeUndefined()
+  })
+})
+
+describe('addGuide / updateGuide / removeGuide / clearGuides', () => {
+  it('adds a guide with the given axis and position', () => {
+    useEditorStore.getState().addGuide('vertical', 42)
+    expect(useEditorStore.getState().guides).toEqual([
+      expect.objectContaining({ axis: 'vertical', position: 42 }),
+    ])
+  })
+
+  it('assigns each guide a unique id', () => {
+    useEditorStore.getState().addGuide('horizontal', 10)
+    useEditorStore.getState().addGuide('horizontal', 20)
+    const [a, b] = useEditorStore.getState().guides
+    expect(a.id).not.toBe(b.id)
+  })
+
+  it('updateGuide repositions a guide by id without touching others', () => {
+    useEditorStore.getState().addGuide('vertical', 10)
+    useEditorStore.getState().addGuide('vertical', 20)
+    const [first, second] = useEditorStore.getState().guides
+    useEditorStore.getState().updateGuide(first.id, 99)
+    const guides = useEditorStore.getState().guides
+    expect(guides.find((g) => g.id === first.id)!.position).toBe(99)
+    expect(guides.find((g) => g.id === second.id)!.position).toBe(20)
+  })
+
+  it('removeGuide deletes only the targeted guide', () => {
+    useEditorStore.getState().addGuide('horizontal', 10)
+    useEditorStore.getState().addGuide('horizontal', 20)
+    const [first, second] = useEditorStore.getState().guides
+    useEditorStore.getState().removeGuide(first.id)
+    const guides = useEditorStore.getState().guides
+    expect(guides).toHaveLength(1)
+    expect(guides[0].id).toBe(second.id)
+  })
+
+  it('clearGuides removes every guide', () => {
+    useEditorStore.getState().addGuide('horizontal', 10)
+    useEditorStore.getState().addGuide('vertical', 20)
+    useEditorStore.getState().clearGuides()
+    expect(useEditorStore.getState().guides).toEqual([])
+  })
+
+  it('is undoable in a single step', () => {
+    useEditorStore.getState().addGuide('vertical', 42)
+    expect(useEditorStore.getState().guides).toHaveLength(1)
+    useEditorStore.getState().undo()
+    expect(useEditorStore.getState().guides).toHaveLength(0)
+    useEditorStore.getState().redo()
+    expect(useEditorStore.getState().guides).toHaveLength(1)
+  })
+
+  it('replaceAll resets guides — session-only scaffolding, not tied to a loaded project', () => {
+    useEditorStore.getState().addGuide('vertical', 42)
+    useEditorStore.getState().replaceAll([], DEFAULT_PRESET_ID)
+    expect(useEditorStore.getState().guides).toEqual([])
   })
 })

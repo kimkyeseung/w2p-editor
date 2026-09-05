@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type {
+  EditorGuide,
   EditorLayer,
   ImageLayer,
   LayerBorder,
@@ -35,6 +36,7 @@ const saveRecentColors = (colors: string[]) => {
 interface HistoryEntry {
   layers: EditorLayer[]
   folders: LayerFolder[]
+  guides: EditorGuide[]
   selectedId: string | null
   selectedIds: string[]
   presetId: string
@@ -48,6 +50,11 @@ interface EditorState {
   // excluded from undo history (see toggleFolderCollapsed) since it's a
   // panel view preference, not document content.
   folders: LayerFolder[]
+  // User-placed ruler guides (see the EditorGuide comment) — undoable within
+  // a session like any other document edit, but session-only scaffolding:
+  // not persisted with save/load or the project API, and reset whenever a
+  // project is loaded via replaceAll.
+  guides: EditorGuide[]
   // `selectedId` is kept as the "primary" selection (set whenever exactly
   // one layer is selected) so existing single-object UI — the properties
   // panel's field editing, canvas.setActiveObject — doesn't need to branch
@@ -136,6 +143,10 @@ interface EditorState {
   // Deliberately not undo-tracked (see the `folders` field comment).
   toggleFolderCollapsed: (id: string) => void
   reorderFolder: (id: string, direction: 'front' | 'back') => void
+  addGuide: (axis: 'horizontal' | 'vertical', position: number) => void
+  updateGuide: (id: string, position: number) => void
+  removeGuide: (id: string) => void
+  clearGuides: () => void
   replaceAll: (layers: EditorLayer[], presetId: string, folders?: LayerFolder[]) => void
   undo: () => void
   redo: () => void
@@ -149,6 +160,7 @@ const createId = () =>
 const snapshotOf = (state: EditorState): HistoryEntry => ({
   layers: state.layers,
   folders: state.folders,
+  guides: state.guides,
   selectedId: state.selectedId,
   selectedIds: state.selectedIds,
   presetId: state.presetId,
@@ -162,6 +174,7 @@ const pushHistory = (state: EditorState): Pick<EditorState, 'past' | 'future'> =
 export const useEditorStore = create<EditorState>((set, get) => ({
   layers: [],
   folders: [],
+  guides: [],
   selectedId: null,
   selectedIds: [],
   presetId: DEFAULT_PRESET_ID,
@@ -767,11 +780,37 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })
   },
 
+  addGuide: (axis, position) => {
+    set((state) => ({
+      ...pushHistory(state),
+      guides: [...state.guides, { id: createId(), axis, position }],
+    }))
+  },
+
+  updateGuide: (id, position) => {
+    set((state) => ({
+      ...pushHistory(state),
+      guides: state.guides.map((g) => (g.id === id ? { ...g, position } : g)),
+    }))
+  },
+
+  removeGuide: (id) => {
+    set((state) => ({
+      ...pushHistory(state),
+      guides: state.guides.filter((g) => g.id !== id),
+    }))
+  },
+
+  clearGuides: () => {
+    set((state) => ({ ...pushHistory(state), guides: [] }))
+  },
+
   replaceAll: (layers, presetId, folders = []) => {
     set((state) => ({
       ...pushHistory(state),
       layers,
       folders,
+      guides: [],
       presetId,
       selectedId: null,
       selectedIds: [],
@@ -779,32 +818,34 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   undo: () => {
-    const { past, layers, folders, selectedId, selectedIds, presetId, future } = get()
+    const { past, layers, folders, guides, selectedId, selectedIds, presetId, future } = get()
     if (past.length === 0) return
     const previous = past[past.length - 1]
     set({
       layers: previous.layers,
       folders: previous.folders,
+      guides: previous.guides,
       selectedId: previous.selectedId,
       selectedIds: previous.selectedIds,
       presetId: previous.presetId,
       past: past.slice(0, -1),
-      future: [{ layers, folders, selectedId, selectedIds, presetId }, ...future].slice(0, MAX_HISTORY),
+      future: [{ layers, folders, guides, selectedId, selectedIds, presetId }, ...future].slice(0, MAX_HISTORY),
     })
   },
 
   redo: () => {
-    const { future, layers, folders, selectedId, selectedIds, presetId, past } = get()
+    const { future, layers, folders, guides, selectedId, selectedIds, presetId, past } = get()
     if (future.length === 0) return
     const next = future[0]
     set({
       layers: next.layers,
       folders: next.folders,
+      guides: next.guides,
       selectedId: next.selectedId,
       selectedIds: next.selectedIds,
       presetId: next.presetId,
       future: future.slice(1),
-      past: [...past, { layers, folders, selectedId, selectedIds, presetId }].slice(-MAX_HISTORY),
+      past: [...past, { layers, folders, guides, selectedId, selectedIds, presetId }].slice(-MAX_HISTORY),
     })
   },
 }))

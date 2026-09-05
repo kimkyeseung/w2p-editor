@@ -52,6 +52,16 @@ export interface LayerBase {
   clipPathId?: string
 }
 
+// A user-placed ruler guide (dragged out from a ruler edge) — `position` is
+// in the same logical canvas-space units as every layer's x/y. Session-only
+// scaffolding rather than document content: not persisted with save/load or
+// the project API, and reset whenever a project is loaded/replaced.
+export interface EditorGuide {
+  id: string
+  axis: 'horizontal' | 'vertical'
+  position: number
+}
+
 export interface LayerFolder {
   id: string
   name: string

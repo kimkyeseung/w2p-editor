@@ -3,7 +3,7 @@ import * as fabric from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
 import { ROTATE_CURSOR } from '../../utils/cursors'
-import type { EditorLayer, ImageLayer, LayerFolder, ShapeLayer, TextLayer } from '../../types/editor'
+import type { EditorGuide, EditorLayer, ImageLayer, LayerFolder, ShapeLayer, TextLayer } from '../../types/editor'
 import {
   exportCanvasAsPng,
   importProjectFile,
@@ -190,6 +190,20 @@ const MAX_ZOOM = 4
 const clampZoom = (value: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value))
 const VIEWPORT_PADDING = 64 // matches .canvas-wrap's CSS padding (2rem each side)
 
+const RULER_SIZE = 20 // px, matches .ruler's thickness in Canvas.css
+
+// Picks the smallest mm interval (from a fixed set of "nice" values) whose
+// on-screen spacing at the current zoom is still readable — re-picked on
+// every render rather than memoized, since it only depends on `zoom`.
+const TICK_INTERVALS_MM = [1, 2, 5, 10, 20, 25, 50, 100, 200, 500]
+const MIN_TICK_SPACING_PX = 40
+const pickTickIntervalMm = (zoomLevel: number) => {
+  for (const mm of TICK_INTERVALS_MM) {
+    if (mmToPx(mm) * zoomLevel >= MIN_TICK_SPACING_PX) return mm
+  }
+  return TICK_INTERVALS_MM[TICK_INTERVALS_MM.length - 1]
+}
+
 // Web fonts loaded via <link> in index.html aren't fetched until something
 // actually renders text with them — and unlike DOM text, Fabric's canvas
 // text draws once with whatever's available *right now* and never repaints
@@ -241,6 +255,15 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     vertical: [],
     horizontal: [],
   })
+  // A guide being dragged out fresh from a ruler (not committed to the store
+  // until drop, so canceling — releasing outside the canvas — is free) or an
+  // existing guide being repositioned (committed on release; see the
+  // handlers below for why this isn't pushed to the store on every pixel of
+  // movement the way a normal layer drag isn't either).
+  const [pendingGuide, setPendingGuide] = useState<{ axis: 'horizontal' | 'vertical'; position: number } | null>(
+    null,
+  )
+  const [draggingGuide, setDraggingGuide] = useState<{ id: string; position: number } | null>(null)
   const isPanning = panMode || spaceHeld
 
   useEffect(() => {
@@ -249,6 +272,11 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
 
   const layers = useEditorStore((s) => s.layers)
   const folders = useEditorStore((s) => s.folders)
+  const guides = useEditorStore((s) => s.guides)
+  const addGuide = useEditorStore((s) => s.addGuide)
+  const updateGuide = useEditorStore((s) => s.updateGuide)
+  const removeGuide = useEditorStore((s) => s.removeGuide)
+  const clearGuides = useEditorStore((s) => s.clearGuides)
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const presetId = useEditorStore((s) => s.presetId)
   const selectLayers = useEditorStore((s) => s.selectLayers)
@@ -279,6 +307,84 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       top: rect.top + (rect.height - frameHeight) / 2 + panY,
       containerRect: rect,
     }
+  }
+
+  // Converts a mouse event's viewport-space (clientX/Y) coordinates into
+  // logical canvas-space units (the same units as every layer's x/y and a
+  // guide's position), inverting frameRect's placement of the canvas origin.
+  const clientToLogical = (clientX: number, clientY: number) => {
+    const frame = frameRect(zoom, pan.x, pan.y)
+    if (!frame) return { x: 0, y: 0 }
+    return { x: (clientX - frame.left) / zoom, y: (clientY - frame.top) / zoom }
+  }
+
+  // Ruler tick layout — recomputed every render (cheap: at most a few dozen
+  // ticks) so panning/zooming keeps them aligned with the canvas underneath.
+  // originX/Y is the canvas's logical (0,0) expressed in canvas-scroll's own
+  // local pixels (matches frameRect's math, but relative to the container
+  // rather than the viewport, since the ruler strips share that container's
+  // coordinate space — see the .ruler-horizontal/.ruler-vertical CSS).
+  const rulerContainer = canvasScrollRef.current
+  const originX = ((rulerContainer?.clientWidth ?? 0) - totalWidth * zoom) / 2 + pan.x
+  const originY = ((rulerContainer?.clientHeight ?? 0) - totalHeight * zoom) / 2 + pan.y
+  const tickIntervalMm = pickTickIntervalMm(zoom)
+  const totalWidthMm = preset.widthMm + preset.bleedMm * 2
+  const totalHeightMm = preset.heightMm + preset.bleedMm * 2
+  const horizontalTicks: number[] = []
+  for (let mm = 0; mm <= totalWidthMm; mm += tickIntervalMm) horizontalTicks.push(mm)
+  const verticalTicks: number[] = []
+  for (let mm = 0; mm <= totalHeightMm; mm += tickIntervalMm) verticalTicks.push(mm)
+
+  // Dragging out from a ruler creates a new guide; tracked purely in local
+  // state (not committed to the store) until release, so this costs nothing
+  // to abandon. Matches Illustrator/Photoshop's "drag a guide off the ruler"
+  // convention, minus their "drag it back to cancel" — released anywhere
+  // commits it here, and a stray one is one double-click away from gone.
+  const handleRulerPointerDown = (axis: 'horizontal' | 'vertical', e: React.PointerEvent<HTMLDivElement>) => {
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // Capture can legitimately fail to acquire (e.g. the pointer was
+      // already released) — the drag still works via move/up bubbling to
+      // this same element in the common case, just without the "follow
+      // across other elements" guarantee capture normally provides.
+    }
+    const { x, y } = clientToLogical(e.clientX, e.clientY)
+    setPendingGuide({ axis, position: Math.round(axis === 'horizontal' ? y : x) })
+  }
+  const handleRulerPointerMove = (axis: 'horizontal' | 'vertical', e: React.PointerEvent<HTMLDivElement>) => {
+    if (!pendingGuide) return
+    const { x, y } = clientToLogical(e.clientX, e.clientY)
+    setPendingGuide({ axis, position: Math.round(axis === 'horizontal' ? y : x) })
+  }
+  const handleRulerPointerUp = () => {
+    if (pendingGuide) addGuide(pendingGuide.axis, pendingGuide.position)
+    setPendingGuide(null)
+  }
+
+  const handleGuidePointerDown = (guide: EditorGuide, e: React.PointerEvent<SVGLineElement>) => {
+    e.stopPropagation()
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // See the matching comment in handleRulerPointerDown.
+    }
+    setDraggingGuide({ id: guide.id, position: guide.position })
+  }
+  const handleGuidePointerMove = (e: React.PointerEvent<SVGLineElement>) => {
+    if (!draggingGuide) return
+    const guide = guides.find((g) => g.id === draggingGuide.id)
+    if (!guide) return
+    const { x, y } = clientToLogical(e.clientX, e.clientY)
+    setDraggingGuide({ id: guide.id, position: Math.round(guide.axis === 'horizontal' ? y : x) })
+  }
+  const handleGuidePointerUp = () => {
+    if (draggingGuide) updateGuide(draggingGuide.id, draggingGuide.position)
+    setDraggingGuide(null)
+  }
+  const handleGuideDoubleClick = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    removeGuide(id)
   }
 
   // Zoom centered on a viewport (client) point, keeping that point visually
@@ -519,6 +625,13 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
         const h = obj.getScaledHeight()
         candidatesX.push(c.x - w / 2, c.x, c.x + w / 2)
         candidatesY.push(c.y - h / 2, c.y, c.y + h / 2)
+      })
+      // Read live rather than closing over `guides` — this handler is wired
+      // up once at mount (see this effect's empty dep array), so a closed-
+      // over value would go stale the moment a guide is added or moved.
+      useEditorStore.getState().guides.forEach((guide) => {
+        if (guide.axis === 'vertical') candidatesX.push(guide.position)
+        else candidatesY.push(guide.position)
       })
 
       let bestDx: number | null = null
@@ -913,9 +1026,83 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
                 </svg>
               </div>
             )}
+            {(guides.length > 0 || pendingGuide) && (
+              <div className="canvas-user-guides" aria-hidden="true">
+                <svg width={totalWidth} height={totalHeight}>
+                  {guides.map((guide) => {
+                    const g = draggingGuide && draggingGuide.id === guide.id ? { ...guide, ...draggingGuide } : guide
+                    const isVertical = g.axis === 'vertical'
+                    const x1 = isVertical ? g.position : 0
+                    const y1 = isVertical ? 0 : g.position
+                    const x2 = isVertical ? g.position : totalWidth
+                    const y2 = isVertical ? totalHeight : g.position
+                    return (
+                      <g key={guide.id}>
+                        <line className="user-guide-line" x1={x1} y1={y1} x2={x2} y2={y2} />
+                        <line
+                          className="user-guide-hit-area"
+                          x1={x1}
+                          y1={y1}
+                          x2={x2}
+                          y2={y2}
+                          style={{ cursor: isVertical ? 'ew-resize' : 'ns-resize' }}
+                          onPointerDown={(e) => handleGuidePointerDown(guide, e)}
+                          onPointerMove={handleGuidePointerMove}
+                          onPointerUp={handleGuidePointerUp}
+                          onPointerCancel={handleGuidePointerUp}
+                          onDoubleClick={(e) => handleGuideDoubleClick(guide.id, e)}
+                        />
+                      </g>
+                    )
+                  })}
+                  {pendingGuide && (
+                    <line
+                      className="user-guide-line is-pending"
+                      x1={pendingGuide.axis === 'vertical' ? pendingGuide.position : 0}
+                      y1={pendingGuide.axis === 'horizontal' ? pendingGuide.position : 0}
+                      x2={pendingGuide.axis === 'vertical' ? pendingGuide.position : totalWidth}
+                      y2={pendingGuide.axis === 'horizontal' ? pendingGuide.position : totalHeight}
+                    />
+                  )}
+                </svg>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Fixed-thickness strips overlaying the canvas-scroll edges — dragging
+          out from either one creates a new guide (released anywhere commits
+          it; there's no "drag back to cancel" in this v1). Ticks are placed
+          in viewport pixels derived from the same origin math as frameRect,
+          recomputed on every render so they track pan/zoom live. */}
+      <div
+        className="ruler ruler-horizontal"
+        onPointerDown={(e) => handleRulerPointerDown('horizontal', e)}
+        onPointerMove={(e) => handleRulerPointerMove('horizontal', e)}
+        onPointerUp={handleRulerPointerUp}
+        onPointerCancel={handleRulerPointerUp}
+      >
+        {horizontalTicks.map((mm) => (
+          <div key={mm} className="ruler-tick" style={{ left: originX + mmToPx(mm) * zoom - RULER_SIZE }}>
+            <span>{mm}</span>
+          </div>
+        ))}
+      </div>
+      <div
+        className="ruler ruler-vertical"
+        onPointerDown={(e) => handleRulerPointerDown('vertical', e)}
+        onPointerMove={(e) => handleRulerPointerMove('vertical', e)}
+        onPointerUp={handleRulerPointerUp}
+        onPointerCancel={handleRulerPointerUp}
+      >
+        {verticalTicks.map((mm) => (
+          <div key={mm} className="ruler-tick" style={{ top: originY + mmToPx(mm) * zoom - RULER_SIZE }}>
+            <span>{mm}</span>
+          </div>
+        ))}
+      </div>
+      <div className="ruler-corner" onDoubleClick={() => clearGuides()} title="더블클릭: 가이드 모두 지우기" />
 
       {/* Sized to the whole viewport (not just the paper) so the hand
           cursor and drag capture keep working over the gray margin too —

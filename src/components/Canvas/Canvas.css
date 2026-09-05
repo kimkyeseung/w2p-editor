@@ -71,6 +71,92 @@
   stroke-width: 1;
 }
 
+.canvas-user-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.user-guide-line {
+  stroke: #22d3ee;
+  stroke-width: 1;
+}
+
+.user-guide-line.is-pending {
+  stroke-dasharray: 4 3;
+}
+
+/* A thin visible line is a poor hit target — this invisible, much wider
+   stroke rides along the same path purely to make the guide easy to grab.
+   `pointer-events: stroke` (rather than the container's inherited `none`)
+   scopes hit-testing to that stroke itself, not the line's full bounding
+   box, so it doesn't block clicks on nearby canvas objects. */
+.user-guide-hit-area {
+  stroke: transparent;
+  stroke-width: 9;
+  pointer-events: stroke;
+}
+
+.ruler {
+  position: absolute;
+  background: #1f2937;
+  overflow: hidden;
+  z-index: 7;
+}
+
+.ruler-horizontal {
+  top: 0;
+  left: 20px;
+  right: 0;
+  height: 20px;
+  cursor: ns-resize;
+}
+
+.ruler-vertical {
+  top: 20px;
+  left: 0;
+  bottom: 0;
+  width: 20px;
+  cursor: ew-resize;
+}
+
+.ruler-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  background: #1f2937;
+  border-right: 1px solid #374151;
+  border-bottom: 1px solid #374151;
+  z-index: 7;
+  cursor: pointer;
+}
+
+.ruler-tick {
+  position: absolute;
+  color: #9ca3af;
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
+.ruler-horizontal .ruler-tick {
+  top: 0;
+  height: 100%;
+  border-left: 1px solid #374151;
+  padding-left: 2px;
+  padding-top: 2px;
+}
+
+.ruler-vertical .ruler-tick {
+  left: 0;
+  width: 100%;
+  border-top: 1px solid #374151;
+  padding-left: 2px;
+  padding-top: 1px;
+  writing-mode: vertical-rl;
+}
+
 .pan-overlay {
   position: absolute;
   inset: 0;
