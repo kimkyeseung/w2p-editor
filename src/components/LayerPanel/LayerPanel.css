@@ -17,7 +17,7 @@
 .panel-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--tb-text-muted, #9297a8);
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -37,8 +37,8 @@
   align-items: center;
   justify-content: center;
   border: none;
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--tb-bg-hover, #2a2d38);
+  color: var(--tb-accent, #6366f1);
   cursor: pointer;
   padding: 0.3rem;
   border-radius: 4px;
@@ -46,18 +46,18 @@
 }
 
 .panel-title-actions button:hover {
-  background: #dbeafe;
+  background: var(--tb-bg-active, #333747);
 }
 
 .layer-empty {
   font-size: 0.85rem;
-  color: #9ca3af;
+  color: var(--tb-text-muted, #9297a8);
 }
 
 .layer-hint {
   margin: 0.6rem 0 0;
   font-size: 0.72rem;
-  color: #9ca3af;
+  color: var(--tb-text-muted, #9297a8);
 }
 
 .layer-list {
@@ -80,12 +80,14 @@
 }
 
 .layer-row:hover {
-  background: #f3f4f6;
+  background: var(--tb-bg-hover, #2a2d38);
 }
 
 .layer-row.is-selected {
-  background: #eff6ff;
-  border-color: #93c5fd;
+  /* Accent-tinted rather than the flat --tb-bg-active used for hover, so a
+     selected row still reads as distinct from a merely-hovered one. */
+  background: rgba(99, 102, 241, 0.18);
+  border-color: var(--tb-accent, #6366f1);
 }
 
 .layer-row.is-hidden .layer-name,
@@ -102,7 +104,7 @@
   height: 1.3rem;
   font-size: 0.72rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--tb-text-muted, #9297a8);
 }
 
 .layer-name {
@@ -130,20 +132,22 @@
   height: 1.5rem;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: var(--tb-text-muted, #9297a8);
   cursor: pointer;
   padding: 0;
   border-radius: 4px;
 }
 
 .layer-actions button:hover {
-  background: #e5e7eb;
-  color: #111827;
+  background: var(--tb-bg-hover, #2a2d38);
+  color: var(--tb-text, #f3f4f6);
 }
 
 .layer-actions button.is-active {
-  background: #fef3c7;
-  color: #b45309;
+  /* Kept a distinct warm amber (vs. the indigo accent used for selection)
+     so "locked" stays visually distinguishable from "selected". */
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
 }
 
 /* Beyond the always-visible visibility toggle, per-row actions only take up
@@ -173,8 +177,8 @@
 }
 
 .layer-row.is-drop-target {
-  background: #eff6ff;
-  border-color: #2563eb;
+  background: rgba(99, 102, 241, 0.18);
+  border-color: var(--tb-accent, #6366f1);
   border-style: dashed;
 }
 
@@ -183,11 +187,11 @@
    italicized so that's visually obvious in the panel. */
 .layer-row.is-mask-layer .layer-name {
   font-style: italic;
-  color: #6b7280;
+  color: var(--tb-text-muted, #9297a8);
 }
 
 .layer-row.is-mask-layer .layer-type-icon {
-  color: #2563eb;
+  color: var(--tb-accent, #6366f1);
 }
 
 .layer-folder {
@@ -215,7 +219,7 @@
   height: 1.3rem;
   border: none;
   background: transparent;
-  color: #9ca3af;
+  color: var(--tb-text-muted, #9297a8);
   cursor: pointer;
   padding: 0;
 }
@@ -237,7 +241,7 @@
   min-width: 0;
   font-size: 0.85rem;
   font-weight: 500;
-  color: #111827;
+  color: var(--tb-text, #f3f4f6);
   border: none;
   background: transparent;
   padding: 0.1rem 0.2rem;
@@ -245,19 +249,19 @@
 }
 
 .layer-folder-name:hover {
-  background: #e5e7eb;
+  background: var(--tb-bg-hover, #2a2d38);
 }
 
 .layer-folder-name:focus {
   outline: none;
-  background: #ffffff;
-  box-shadow: 0 0 0 1px #93c5fd;
+  background: var(--tb-bg-raised, #1f2129);
+  box-shadow: 0 0 0 1px var(--tb-accent, #6366f1);
 }
 
 .layer-folder-count {
   flex-shrink: 0;
   font-size: 0.7rem;
-  color: #9ca3af;
+  color: var(--tb-text-muted, #9297a8);
   padding: 0 0.2rem;
 }
 

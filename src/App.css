@@ -13,16 +13,17 @@
 }
 
 .side-panel {
-  background: #ffffff;
+  background: var(--tb-bg, #17181f);
+  color: var(--tb-text, #f3f4f6);
   overflow: hidden;
 }
 
 .layer-panel-wrap {
-  border-right: 1px solid #d1d5db;
+  border-right: 1px solid var(--tb-border, #2c2f3a);
 }
 
 .properties-panel-wrap {
-  border-left: 1px solid #d1d5db;
+  border-left: 1px solid var(--tb-border, #2c2f3a);
 }
 
 .canvas-wrap {
@@ -49,7 +50,7 @@
     display: none;
     grid-row: 2;
     max-height: 40vh;
-    border-top: 1px solid #d1d5db;
+    border-top: 1px solid var(--tb-border, #2c2f3a);
     border-right: none;
     border-left: none;
   }
@@ -60,8 +61,8 @@
 
   .mobile-tabs {
     display: flex;
-    background: #ffffff;
-    border-top: 1px solid #d1d5db;
+    background: var(--tb-bg, #17181f);
+    border-top: 1px solid var(--tb-border, #2c2f3a);
   }
 
   .mobile-tabs button {
@@ -70,12 +71,12 @@
     border: none;
     background: transparent;
     font-size: 0.85rem;
-    color: #6b7280;
+    color: var(--tb-text-muted, #9297a8);
   }
 
   .mobile-tabs button.is-active {
-    color: #2563eb;
+    color: var(--tb-accent, #6366f1);
     font-weight: 600;
-    border-top: 2px solid #2563eb;
+    border-top: 2px solid var(--tb-accent, #6366f1);
   }
 }

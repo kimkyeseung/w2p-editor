@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.78rem;
-  color: #4b5563;
+  color: var(--tb-text-muted, #9297a8);
 }
 
 .ui-number-field-wrap {
@@ -16,8 +16,15 @@
   font-size: 0.85rem;
   padding: 0.35rem 0.5rem;
   border-radius: 6px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--tb-border, #2c2f3a);
+  background: var(--tb-bg-raised, #1f2129);
+  color: var(--tb-text, #f3f4f6);
   font-family: inherit;
+}
+
+.ui-number-field-wrap input:focus {
+  outline: 2px solid var(--tb-accent, #6366f1);
+  outline-offset: 1px;
 }
 
 .ui-number-field-suffix {
@@ -26,6 +33,6 @@
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--tb-text-muted, #9297a8);
   pointer-events: none;
 }
