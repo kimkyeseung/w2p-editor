@@ -58,7 +58,22 @@ export const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLaye
   obj.set({ originX: 'center', originY: 'center', left: centerX, top: centerY, angle: layer.rotation })
 }
 
-export const applyTextLayer = (obj: fabric.Textbox, layer: TextLayer, folders: LayerFolder[]) => {
+// Text layers are a fabric.IText (not a Textbox) rendered at its natural,
+// unwrapped size and then fit to the layer's own width/height purely via
+// scaleX/scaleY — the same "final size / natural size = scale" approach
+// applyImageLayer uses for images below. This is a deliberate choice: a
+// Textbox's width is a wrap boundary, and its ml/mr controls are special-
+// cased (Textbox's own `changeWidth`) to resize that boundary and re-wrap
+// rather than visually stretch — so a Textbox can *never* be freely
+// distorted horizontally the way an image or shape can, no matter what a
+// drag handle does to it. This app wants text to behave exactly like any
+// other resizable layer (drag a side handle to stretch/squish it, a corner
+// to scale it proportionally), so it opts out of Textbox's wrapping
+// altogether: IText auto-sizes to its content (wrapping only on explicit
+// newlines) via FabricText's own `set()", which re-measures `width`/
+// `height` for us whenever a layout-affecting property (text/font/size/
+// spacing/lineHeight) changes — no manual initDimensions() call needed.
+export const applyTextLayer = (obj: fabric.IText, layer: TextLayer, folders: LayerFolder[]) => {
   obj.set({
     text: layer.text,
     fontFamily: layer.fontFamily,
@@ -69,12 +84,10 @@ export const applyTextLayer = (obj: fabric.Textbox, layer: TextLayer, folders: L
     lineHeight: layer.lineHeight,
     fill: layer.color,
     textAlign: layer.align,
-    width: layer.width,
-    scaleX: 1,
   })
-  obj.initDimensions()
-  const measuredHeight = obj.height || 1
-  obj.set('scaleY', layer.height / measuredHeight)
+  const naturalWidth = obj.width || 1
+  const naturalHeight = obj.height || 1
+  obj.set({ scaleX: layer.width / naturalWidth, scaleY: layer.height / naturalHeight })
   applyCommonTransform(obj, layer, folders)
 }
 
@@ -82,16 +95,15 @@ export const applyRotateCursor = (obj: fabric.FabricObject) => {
   if (obj.controls.mtr) obj.controls.mtr.cursorStyle = ROTATE_CURSOR
 }
 
-export const createTextObject = (layer: TextLayer, folders: LayerFolder[]): fabric.Textbox => {
+export const createTextObject = (layer: TextLayer, folders: LayerFolder[]): fabric.IText => {
   const { centerX, centerY } = centerFromTopLeft(layer)
   const visible = isLayerVisible(layer, folders)
   const locked = isLayerLocked(layer, folders)
-  const textbox = new fabric.Textbox(layer.text, {
+  const itext = new fabric.IText(layer.text, {
     originX: 'center',
     originY: 'center',
     left: centerX,
     top: centerY,
-    width: layer.width,
     fontFamily: layer.fontFamily,
     fontSize: layer.fontSize,
     fontWeight: layer.fontWeight,
@@ -111,8 +123,17 @@ export const createTextObject = (layer: TextLayer, folders: LayerFolder[]): fabr
     selectable: !locked && visible,
     evented: !locked && visible,
   })
-  applyRotateCursor(textbox)
-  return textbox
+  // The constructor above measures the text at its natural, unscaled size
+  // (no `width` was given — see the comment on applyTextLayer above for
+  // why this is an IText, not a Textbox) — fit that to the layer's own
+  // width/height via scale here too, so a freshly-created object is
+  // correctly sized from its first frame instead of only after the next
+  // reconciliation pass (e.g. selecting it) happens to call applyTextLayer.
+  const naturalWidth = itext.width || 1
+  const naturalHeight = itext.height || 1
+  itext.set({ scaleX: layer.width / naturalWidth, scaleY: layer.height / naturalHeight })
+  applyRotateCursor(itext)
+  return itext
 }
 
 export const applyImageLayer = (obj: fabric.FabricImage, layer: ImageLayer, folders: LayerFolder[]) => {

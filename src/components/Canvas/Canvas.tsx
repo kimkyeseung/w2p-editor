@@ -3,7 +3,7 @@ import * as fabric from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
 import { isEditableTarget } from '../../utils/dom'
-import type { EditorGuide, ImageLayer, TextLayer } from '../../types/editor'
+import type { EditorGuide, ImageLayer } from '../../types/editor'
 import {
   exportCanvasAsPng,
   importProjectFile,
@@ -58,10 +58,12 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   // discard -> selection:cleared -> store update -> re-render loop.
   const prevPositionsRef = useRef(new Map<string, { x: number; y: number }>())
   const pendingImageIds = useRef(new Set<string>())
-  // Font families we've already asked the browser to fetch (see the web-font
-  // effect below) — lets that effect skip families it has already kicked
-  // off instead of re-requesting them on every layers change.
-  const requestedFontsRef = useRef(new Set<string>())
+  // Characters we've already asked the browser to fetch, per font family
+  // (see the web-font effect below) — lets that effect request only the
+  // characters it hasn't already kicked off instead of re-requesting a
+  // whole family (or, worse, never requesting the actual glyphs — see the
+  // comment in that effect) on every layers change.
+  const requestedGlyphsRef = useRef(new Map<string, Set<string>>())
   const pinchStateRef = useRef<{ distance: number; zoom: number } | null>(null)
   const panDragRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number } | null>(null)
   const marqueeStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -430,6 +432,17 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     const applyModifiedTarget = (target: fabric.FabricObject) => {
       const id = objectToId.current.get(target)
       if (!id) return
+
+      // Text is a fabric.IText fit to its layer's width/height purely via
+      // scaleX/scaleY (see the comment on applyTextLayer in fabricObjects.ts)
+      // — exactly the same model images and shapes already use below. That
+      // means every resize gesture (side handle, corner, top/bottom) needs
+      // no text-specific handling at all: whatever scaleX/scaleY the drag
+      // left on the object is read back via getScaledWidth/Height like any
+      // other layer, which is precisely the free-transform behavior (a side
+      // handle stretches/squishes it, a corner scales it proportionally)
+      // this app wants for text, matching how it already treats images and
+      // shapes.
       const topLeft = topLeftFromObject(target)
       // Fabric also fires `object:modified` when the user finishes editing
       // text inline on the canvas (double-click). If we only write the
@@ -442,7 +455,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
         width: Math.round(topLeft.width),
         height: Math.round(topLeft.height),
         rotation: Math.round(target.angle ?? 0),
-        ...(target instanceof fabric.Textbox ? { text: target.text ?? '' } : {}),
+        ...(target instanceof fabric.IText ? { text: target.text ?? '' } : {}),
       })
     }
 
@@ -455,7 +468,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       // per layer (an ActiveSelection is a transient Fabric wrapper, not a
       // tracked layer, so objectToId has no entry for it).
       if (target instanceof fabric.ActiveSelection) {
-        target.getObjects().forEach(applyModifiedTarget)
+        target.getObjects().forEach((obj) => applyModifiedTarget(obj))
       } else {
         applyModifiedTarget(target)
       }
@@ -650,25 +663,82 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   // cover this, but it missed exactly the case that mattered: picking a
   // sample preset (or loading/importing a project) well after mount adds
   // text in fonts that were never requested, so it stayed on the system
-  // fallback until some unrelated interaction (e.g. selecting the layer)
-  // forced a re-render. Re-derive the fonts actually in use from `layers`
-  // instead, and explicitly kick off (and re-render after) whichever of
-  // them haven't been requested yet.
+  // fallback until some unrelated interaction forced a re-render. Re-derive
+  // the fonts actually in use from `layers` instead, and explicitly kick off
+  // (and re-render after) whichever of them haven't been requested yet.
+  //
+  // `document.fonts.load(font)` without a `text` argument only resolves the
+  // *default* (Latin-ish) test string against the family's @font-face rules
+  // — for a Google Fonts Korean family, that's served as dozens of
+  // unicode-range-split files, so the call reports "loaded" after fetching
+  // only the common/Latin chunk while every Hangul-glyph chunk stays
+  // unfetched. Fabric then draws with the fallback font indefinitely, since
+  // nothing else on this canvas-only (non-DOM) page ever asks for those
+  // glyphs — the click that "fixes" it just happens to trigger some other
+  // re-render after the browser's *own* unrelated font traffic quietly
+  // finished. Passing the layers' actual text as that second argument makes
+  // the browser resolve the unicode-range chunks the glyphs really live in.
   useEffect(() => {
     if (typeof document === 'undefined' || !('fonts' in document)) return
-    const families = new Set(
-      layers.filter((l): l is TextLayer => l.type === 'text').map((l) => l.fontFamily),
-    )
-    const toLoad = [...families].filter((family) => !requestedFontsRef.current.has(family))
-    if (toLoad.length === 0) return
-    toLoad.forEach((family) => requestedFontsRef.current.add(family))
-    const loads = toLoad.flatMap((family) => [
-      document.fonts.load(`16px "${family}"`).catch(() => {}),
-      document.fonts.load(`700 16px "${family}"`).catch(() => {}),
-      document.fonts.load(`italic 16px "${family}"`).catch(() => {}),
-    ])
+    const textByFamily = new Map<string, string>()
+    for (const layer of layers) {
+      if (layer.type !== 'text') continue
+      textByFamily.set(layer.fontFamily, (textByFamily.get(layer.fontFamily) ?? '') + layer.text)
+    }
+    const loads: Promise<unknown>[] = []
+    const familiesToRefresh = new Set<string>()
+    for (const [family, text] of textByFamily) {
+      const requested = requestedGlyphsRef.current.get(family) ?? new Set<string>()
+      const newChars = [...new Set(text)].filter((ch) => !requested.has(ch))
+      if (newChars.length === 0) continue
+      newChars.forEach((ch) => requested.add(ch))
+      requestedGlyphsRef.current.set(family, requested)
+      familiesToRefresh.add(family)
+      const sample = newChars.join('')
+      loads.push(
+        document.fonts.load(`16px "${family}"`, sample).catch(() => {}),
+        document.fonts.load(`700 16px "${family}"`, sample).catch(() => {}),
+        document.fonts.load(`italic 16px "${family}"`, sample).catch(() => {}),
+      )
+    }
+    if (loads.length === 0) return
     Promise.all(loads).finally(() => {
-      fabricRef.current?.requestRenderAll()
+      const canvas = fabricRef.current
+      if (!canvas) return
+      // Two separate corrections are needed once the real font actually
+      // becomes available, not just "loaded" per the Promise above:
+      //
+      // 1. Fabric caches each text object's rendering to an offscreen canvas
+      //    (objectCaching, on by default) and only re-renders it from scratch
+      //    when something Fabric itself tracks marks it dirty — a font
+      //    finishing its (browser-level, Fabric-invisible) load doesn't.
+      //
+      // 2. `createTextObject`/`applyTextLayer` fit the layer's fixed height
+      //    by measuring the text (which relies on `ctx.measureText`, i.e.
+      //    whatever font the browser has *actually* substituted at that
+      //    exact moment) and scaling to match — so the
+      //    very first measurement, taken before this font was available,
+      //    used the fallback font's metrics. Re-measuring only `dirty`s the
+      //    bitmap, not this scale, so the box was left sized for the wrong
+      //    font's line height until the next unrelated reconciliation pass
+      //    (e.g. selecting the layer) happened to call applyTextLayer again
+      //    — which is exactly what made the box visibly snap taller/shorter
+      //    on click. Re-measuring here instead applies that correction
+      //    immediately, as part of the same font swap, so selecting the
+      //    layer later is a no-op for its size.
+      const { layers: freshLayers, folders: freshFolders } = useEditorStore.getState()
+      for (const layer of freshLayers) {
+        if (layer.type !== 'text' || !familiesToRefresh.has(layer.fontFamily)) continue
+        const obj = idToObject.current.get(layer.id)
+        if (!(obj instanceof fabric.IText)) continue
+        applyTextLayer(obj, layer, freshFolders)
+        // applyTextLayer only flips `dirty` itself when one of the props it
+        // writes actually changed value — the new glyphs alone don't count,
+        // since `fontFamily`/`text` are unchanged strings. Force it so the
+        // now-available glyphs actually get drawn (see point 1 above).
+        obj.dirty = true
+      }
+      canvas.requestRenderAll()
     })
   }, [layers])
 
@@ -783,7 +853,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       if (maskedAwayIds.has(layer.id)) return
       const existing = idToObject.current.get(layer.id)
       if (existing) {
-        if (layer.type === 'text' && existing instanceof fabric.Textbox) {
+        if (layer.type === 'text' && existing instanceof fabric.IText) {
           applyTextLayer(existing, layer, folders)
         } else if (layer.type === 'image') {
           applyImageLayer(existing as fabric.FabricImage, layer, folders)
