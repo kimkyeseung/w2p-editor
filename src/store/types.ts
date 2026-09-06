@@ -155,10 +155,18 @@ export interface EditorState {
   setClipMask: (maskId: string, targetId: string) => void
   removeClipMask: (targetId: string) => void
   alignLayer: (id: string, alignment: 'left' | 'center-x' | 'right' | 'top' | 'center-y' | 'bottom') => void
-  // Illustrator-style "align to selection" (as opposed to alignLayer's
-  // align-to-canvas): positions every given layer relative to the
-  // combined bounding box of the whole set, not the artboard.
+  // Illustrator-style "align to selection" (as opposed to alignLayer's /
+  // alignLayersToCanvas's align-to-canvas): positions every given layer
+  // relative to the combined bounding box of the whole set, not the
+  // artboard.
   alignLayers: (ids: string[], alignment: 'left' | 'center-x' | 'right' | 'top' | 'center-y' | 'bottom') => void
+  // Multi-select version of alignLayer: aligns each given layer to the
+  // canvas edge/center independently (so, unlike alignLayers, the
+  // selection's members don't keep their positions relative to each other).
+  alignLayersToCanvas: (
+    ids: string[],
+    alignment: 'left' | 'center-x' | 'right' | 'top' | 'center-y' | 'bottom',
+  ) => void
   // Equalizes the gaps between adjacent layers' bounding boxes along one
   // axis, keeping the first and last (by position) fixed — needs 3+ layers
   // to mean anything, since 2 layers have only a single gap to equalize.

@@ -1,12 +1,28 @@
 // Align-to-canvas, align-to-selection, and even-gap distribution.
 import type { StoreApi } from 'zustand'
+import type { EditorLayer } from '../../types/editor'
 import type { EditorState } from '../types'
 import { getPresetById, mmToPx } from '../../utils/presets'
 import { pushHistory } from '../historyHelpers'
 
 type Set = StoreApi<EditorState>['setState']
+type Alignment = 'left' | 'center-x' | 'right' | 'top' | 'center-y' | 'bottom'
 
-export type AlignSlice = Pick<EditorState, 'alignLayer' | 'alignLayers' | 'distributeLayers'>
+export type AlignSlice = Pick<EditorState, 'alignLayer' | 'alignLayers' | 'alignLayersToCanvas' | 'distributeLayers'>
+
+// Shared by alignLayer (one layer) and alignLayersToCanvas (each layer in a
+// multi-selection independently) — every other layer's position is
+// irrelevant here, unlike alignLayers' align-to-selection.
+const alignToCanvas = (layer: EditorLayer, alignment: Alignment, canvasWidth: number, canvasHeight: number) => {
+  let { x, y } = layer
+  if (alignment === 'left') x = 0
+  else if (alignment === 'center-x') x = (canvasWidth - layer.width) / 2
+  else if (alignment === 'right') x = canvasWidth - layer.width
+  else if (alignment === 'top') y = 0
+  else if (alignment === 'center-y') y = (canvasHeight - layer.height) / 2
+  else if (alignment === 'bottom') y = canvasHeight - layer.height
+  return { x, y }
+}
 
 export const createAlignSlice = (set: Set): AlignSlice => ({
   alignLayer: (id, alignment) => {
@@ -16,18 +32,29 @@ export const createAlignSlice = (set: Set): AlignSlice => ({
       const preset = getPresetById(state.presetId)
       const canvasWidth = mmToPx(preset.widthMm + preset.bleedMm * 2)
       const canvasHeight = mmToPx(preset.heightMm + preset.bleedMm * 2)
-
-      let { x, y } = layer
-      if (alignment === 'left') x = 0
-      else if (alignment === 'center-x') x = (canvasWidth - layer.width) / 2
-      else if (alignment === 'right') x = canvasWidth - layer.width
-      else if (alignment === 'top') y = 0
-      else if (alignment === 'center-y') y = (canvasHeight - layer.height) / 2
-      else if (alignment === 'bottom') y = canvasHeight - layer.height
+      const { x, y } = alignToCanvas(layer, alignment, canvasWidth, canvasHeight)
 
       return {
         ...pushHistory(state),
         layers: state.layers.map((l) => (l.id === id ? { ...l, x, y } : l)),
+      }
+    })
+  },
+
+  alignLayersToCanvas: (ids, alignment) => {
+    if (ids.length === 0) return
+    set((state) => {
+      const idSet = new Set(ids)
+      if (!state.layers.some((l) => idSet.has(l.id))) return state
+      const preset = getPresetById(state.presetId)
+      const canvasWidth = mmToPx(preset.widthMm + preset.bleedMm * 2)
+      const canvasHeight = mmToPx(preset.heightMm + preset.bleedMm * 2)
+
+      return {
+        ...pushHistory(state),
+        layers: state.layers.map((l) =>
+          idSet.has(l.id) ? { ...l, ...alignToCanvas(l, alignment, canvasWidth, canvasHeight) } : l,
+        ),
       }
     })
   },

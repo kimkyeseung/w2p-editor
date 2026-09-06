@@ -49,6 +49,7 @@ export function PropertiesPanel() {
   const renameLayer = useEditorStore((s) => s.renameLayer)
   const alignLayer = useEditorStore((s) => s.alignLayer)
   const alignLayers = useEditorStore((s) => s.alignLayers)
+  const alignLayersToCanvas = useEditorStore((s) => s.alignLayersToCanvas)
   const distributeLayers = useEditorStore((s) => s.distributeLayers)
 
   const layer = layers.find((l) => l.id === selectedId)
@@ -78,6 +79,30 @@ export function PropertiesPanel() {
               세로 중앙
             </button>
             <button type="button" onClick={() => alignLayers(selectedIds, 'bottom')}>
+              하단
+            </button>
+          </div>
+        </div>
+
+        <div className="prop-section">
+          <span className="prop-section-title">정렬 (캔버스 기준)</span>
+          <div className="prop-align-grid">
+            <button type="button" onClick={() => alignLayersToCanvas(selectedIds, 'left')}>
+              좌측
+            </button>
+            <button type="button" onClick={() => alignLayersToCanvas(selectedIds, 'center-x')}>
+              가로 중앙
+            </button>
+            <button type="button" onClick={() => alignLayersToCanvas(selectedIds, 'right')}>
+              우측
+            </button>
+            <button type="button" onClick={() => alignLayersToCanvas(selectedIds, 'top')}>
+              상단
+            </button>
+            <button type="button" onClick={() => alignLayersToCanvas(selectedIds, 'center-y')}>
+              세로 중앙
+            </button>
+            <button type="button" onClick={() => alignLayersToCanvas(selectedIds, 'bottom')}>
               하단
             </button>
           </div>
