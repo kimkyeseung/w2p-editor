@@ -168,6 +168,18 @@ export const applyShapeStyle = (obj: fabric.Object, layer: ShapeLayer, folders: 
     fill: buildFill(layer),
     stroke: layer.stroke,
     strokeWidth: layer.strokeWidth,
+    // A corner/side-handle resize leaves Fabric's own scaleX/scaleY on the
+    // object (shapes use the generic scaling controls, unlike Textbox's
+    // width-driven ml/mr) — every branch above just wrote the *result* of
+    // that drag into width/height/rx/ry directly, so leaving the drag's
+    // scale in place on top would double it. Reset both to 1 so this
+    // object's size lives in width/height alone, exactly like a freshly
+    // created one (createShapeObject never sets a scale either) — without
+    // this, each subsequent move or resize re-reads the already-scaled
+    // width/height, multiplies by the still-stale scale again, and the
+    // shape grows a little more every time it's touched.
+    scaleX: 1,
+    scaleY: 1,
   })
   applyCommonTransform(obj, layer, folders)
 }
