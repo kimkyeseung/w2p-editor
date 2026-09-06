@@ -21,8 +21,21 @@ import {
 
 export const topLeftFromObject = (obj: fabric.FabricObject) => {
   const center = obj.getCenterPoint()
-  const width = obj.getScaledWidth()
-  const height = obj.getScaledHeight()
+  // getScaledWidth()/Height() bakes the stroke into the result — Fabric's
+  // own notion of "object size" is the fill plus the stroke halo around it.
+  // That's exactly right for a path: strokeUniform:true rendering plus
+  // pathScale()'s sizing formula (see its comment in canvasHelpers.ts)
+  // already treat the stroke as part of the stored width/height. But every
+  // other layer type stores width/height as the fill size alone —
+  // applyShapeStyle/applyImageLayer/applyTextLayer set (or scale relative
+  // to) `.width`/`.height` directly, with no allowance for the stroke on
+  // top. Reading the stroke-inclusive value back into that fill-only field
+  // leaks +strokeWidth into the layer on every single modification —
+  // compounding without bound across repeated moves/resizes, since each
+  // write-back becomes the next read's baseline (a shape visibly grows a
+  // couple of pixels taller/wider every time it's merely dragged).
+  const width = obj.strokeUniform ? obj.getScaledWidth() : (obj.width ?? 0) * (obj.scaleX ?? 1)
+  const height = obj.strokeUniform ? obj.getScaledHeight() : (obj.height ?? 0) * (obj.scaleY ?? 1)
   return {
     x: center.x - width / 2,
     y: center.y - height / 2,
