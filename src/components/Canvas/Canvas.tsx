@@ -1,18 +1,8 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import * as fabric from 'fabric'
-import type { TComplexPathData } from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
-import { ROTATE_CURSOR } from '../../utils/cursors'
-import type {
-  EditorGuide,
-  EditorLayer,
-  ImageLayer,
-  LayerFolder,
-  PathLayer,
-  ShapeLayer,
-  TextLayer,
-} from '../../types/editor'
+import type { EditorGuide, ImageLayer, TextLayer } from '../../types/editor'
 import {
   exportCanvasAsPng,
   importProjectFile,
@@ -21,16 +11,20 @@ import {
   exportProjectFile,
 } from '../../utils/canvasSerialization'
 import {
-  buildBorderProps,
-  buildFill,
-  buildShadow,
-  centerFromTopLeft,
-  isLayerLocked,
-  isLayerVisible,
-  pathScale,
-  unionBoundingBox,
-} from './canvasHelpers'
-import { ContextMenu, type ContextMenuEntry } from '../ContextMenu/ContextMenu'
+  applyImageLayer,
+  applyPathStyle,
+  applyRotateCursor,
+  applyShapeStyle,
+  applyTextLayer,
+  buildFlattenedImage,
+  createPathObject,
+  createShapeObject,
+  createTextObject,
+  topLeftFromObject,
+} from './fabricObjects'
+import { RULER_SIZE, VIEWPORT_PADDING, clampZoom, isTypingTarget, pickTickIntervalMm } from './canvasView'
+import { ContextMenu } from '../ContextMenu/ContextMenu'
+import { useCanvasContextMenu } from './useCanvasContextMenu'
 import './Canvas.css'
 
 export interface CanvasHandle {
@@ -43,329 +37,7 @@ export interface CanvasHandle {
   flattenSelection: () => Promise<void>
 }
 
-const topLeftFromObject = (obj: fabric.FabricObject) => {
-  const center = obj.getCenterPoint()
-  const width = obj.getScaledWidth()
-  const height = obj.getScaledHeight()
-  return {
-    x: center.x - width / 2,
-    y: center.y - height / 2,
-    width,
-    height,
-  }
-}
 
-const applyCommonTransform = (obj: fabric.FabricObject, layer: EditorLayer, folders: LayerFolder[]) => {
-  const visible = isLayerVisible(layer, folders)
-  const locked = isLayerLocked(layer, folders)
-  obj.set({
-    visible,
-    opacity: layer.opacity,
-    shadow: buildShadow(layer.shadow),
-    ...(layer.type === 'shape' || layer.type === 'path' ? {} : buildBorderProps(layer.border)),
-    flipX: layer.flipX,
-    flipY: layer.flipY,
-    globalCompositeOperation: layer.blendMode,
-    selectable: !locked && visible,
-    evented: !locked && visible,
-  })
-  // While the object is part of a live multi-selection (ActiveSelection),
-  // Fabric reinterprets left/top as relative to the group, not absolute
-  // canvas coordinates — writing our absolute x/y here corrupts its
-  // transform and renders it far outside the visible selection box (looks
-  // like the text vanished). The object already reflects any in-progress
-  // group drag, and Fabric bakes its position back to absolute coordinates
-  // the instant it leaves the group (deselect), so it's safe to skip this
-  // and let a later reconciliation pick it back up once ungrouped.
-  if (obj.group) return
-  const { centerX, centerY } = centerFromTopLeft(layer)
-  obj.set({ originX: 'center', originY: 'center', left: centerX, top: centerY, angle: layer.rotation })
-}
-
-const applyTextLayer = (obj: fabric.Textbox, layer: TextLayer, folders: LayerFolder[]) => {
-  obj.set({
-    text: layer.text,
-    fontFamily: layer.fontFamily,
-    fontSize: layer.fontSize,
-    fontWeight: layer.fontWeight,
-    fontStyle: layer.fontStyle,
-    charSpacing: layer.charSpacing,
-    lineHeight: layer.lineHeight,
-    fill: layer.color,
-    textAlign: layer.align,
-    width: layer.width,
-    scaleX: 1,
-  })
-  obj.initDimensions()
-  const measuredHeight = obj.height || 1
-  obj.set('scaleY', layer.height / measuredHeight)
-  applyCommonTransform(obj, layer, folders)
-}
-
-const createTextObject = (layer: TextLayer, folders: LayerFolder[]): fabric.Textbox => {
-  const { centerX, centerY } = centerFromTopLeft(layer)
-  const visible = isLayerVisible(layer, folders)
-  const locked = isLayerLocked(layer, folders)
-  const textbox = new fabric.Textbox(layer.text, {
-    originX: 'center',
-    originY: 'center',
-    left: centerX,
-    top: centerY,
-    width: layer.width,
-    fontFamily: layer.fontFamily,
-    fontSize: layer.fontSize,
-    fontWeight: layer.fontWeight,
-    fontStyle: layer.fontStyle,
-    charSpacing: layer.charSpacing,
-    lineHeight: layer.lineHeight,
-    fill: layer.color,
-    textAlign: layer.align,
-    angle: layer.rotation,
-    opacity: layer.opacity,
-    shadow: buildShadow(layer.shadow),
-    ...buildBorderProps(layer.border),
-    flipX: layer.flipX,
-    flipY: layer.flipY,
-    globalCompositeOperation: layer.blendMode,
-    visible,
-    selectable: !locked && visible,
-    evented: !locked && visible,
-  })
-  applyRotateCursor(textbox)
-  return textbox
-}
-
-const applyRotateCursor = (obj: fabric.FabricObject) => {
-  if (obj.controls.mtr) obj.controls.mtr.cursorStyle = ROTATE_CURSOR
-}
-
-const applyImageLayer = (obj: fabric.FabricImage, layer: ImageLayer, folders: LayerFolder[]) => {
-  const baseWidth = obj.width || 1
-  const baseHeight = obj.height || 1
-  obj.set({ scaleX: layer.width / baseWidth, scaleY: layer.height / baseHeight })
-  applyCommonTransform(obj, layer, folders)
-}
-
-const applyShapeStyle = (obj: fabric.Object, layer: ShapeLayer, folders: LayerFolder[]) => {
-  if (layer.shape === 'ellipse') {
-    ;(obj as fabric.Ellipse).set({ rx: layer.width / 2, ry: layer.height / 2 })
-  } else if (layer.shape === 'line') {
-    ;(obj as fabric.Line).set({ x1: 0, y1: 0, x2: layer.width, y2: layer.height })
-  } else {
-    obj.set({ width: layer.width, height: layer.height })
-  }
-  obj.set({
-    fill: buildFill(layer),
-    stroke: layer.stroke,
-    strokeWidth: layer.strokeWidth,
-  })
-  applyCommonTransform(obj, layer, folders)
-}
-
-const createShapeObject = (layer: ShapeLayer, folders: LayerFolder[]): fabric.Object => {
-  const { centerX, centerY } = centerFromTopLeft(layer)
-  const visible = isLayerVisible(layer, folders)
-  const locked = isLayerLocked(layer, folders)
-  const common = {
-    originX: 'center' as const,
-    originY: 'center' as const,
-    left: centerX,
-    top: centerY,
-    angle: layer.rotation,
-    fill: buildFill(layer),
-    stroke: layer.stroke,
-    strokeWidth: layer.strokeWidth,
-    opacity: layer.opacity,
-    shadow: buildShadow(layer.shadow),
-    flipX: layer.flipX,
-    flipY: layer.flipY,
-    globalCompositeOperation: layer.blendMode,
-    visible,
-    selectable: !locked && visible,
-    evented: !locked && visible,
-  }
-  let obj: fabric.Object
-  switch (layer.shape) {
-    case 'ellipse':
-      obj = new fabric.Ellipse({ ...common, rx: layer.width / 2, ry: layer.height / 2 })
-      break
-    case 'triangle':
-      obj = new fabric.Triangle({ ...common, width: layer.width, height: layer.height })
-      break
-    case 'line':
-      obj = new fabric.Line([0, 0, layer.width, layer.height], common)
-      break
-    default:
-      obj = new fabric.Rect({ ...common, width: layer.width, height: layer.height })
-  }
-  applyRotateCursor(obj)
-  return obj
-}
-
-// A path's own `width`/`height` come from its command data's bounding box
-// and never change after the stroke is drawn — so, like an image's natural
-// pixel size, matching the stored layer.width/height is purely a matter of
-// scale, not of touching the path data itself (see pathScale for the formula
-// and why strokeUniform matters here).
-const applyPathStyle = (obj: fabric.Path, layer: PathLayer, folders: LayerFolder[]) => {
-  obj.set({
-    scaleX: pathScale(obj.width, layer.strokeWidth, layer.width),
-    scaleY: pathScale(obj.height, layer.strokeWidth, layer.height),
-    fill: layer.fill || '',
-    stroke: layer.stroke,
-    strokeWidth: layer.strokeWidth,
-    strokeUniform: true,
-  })
-  applyCommonTransform(obj, layer, folders)
-}
-
-const createPathObject = (layer: PathLayer, folders: LayerFolder[]): fabric.Path => {
-  const { centerX, centerY } = centerFromTopLeft(layer)
-  const visible = isLayerVisible(layer, folders)
-  const locked = isLayerLocked(layer, folders)
-  const obj = new fabric.Path(layer.path as TComplexPathData, {
-    originX: 'center',
-    originY: 'center',
-    left: centerX,
-    top: centerY,
-    angle: layer.rotation,
-    fill: layer.fill || '',
-    stroke: layer.stroke,
-    strokeWidth: layer.strokeWidth,
-    strokeUniform: true,
-    opacity: layer.opacity,
-    shadow: buildShadow(layer.shadow),
-    flipX: layer.flipX,
-    flipY: layer.flipY,
-    globalCompositeOperation: layer.blendMode,
-    visible,
-    selectable: !locked && visible,
-    evented: !locked && visible,
-  })
-  obj.set({
-    scaleX: pathScale(obj.width, layer.strokeWidth, layer.width),
-    scaleY: pathScale(obj.height, layer.strokeWidth, layer.height),
-  })
-  applyRotateCursor(obj)
-  return obj
-}
-
-// Renders the given layers (in their original z-order) onto a detached,
-// off-DOM canvas sized to their combined bounding box, then exports that as
-// a single PNG data URL — the raw material for "flatten selection". Reuses
-// the exact same object-builders as the live canvas, so shadow/border/
-// gradient/opacity/blend-mode/flip/rotation and even clip-mask relationships
-// come along for free; multiplier: 2 matches exportCanvasAsPng's own
-// convention for crisp (retina-ish) raster output.
-const buildFlattenedImage = async (
-  selectedIds: string[],
-  layers: EditorLayer[],
-  folders: LayerFolder[],
-): Promise<{ src: string; x: number; y: number; width: number; height: number } | null> => {
-  const idSet = new Set(selectedIds)
-  const selected = layers.filter((l) => idSet.has(l.id))
-  if (selected.length === 0) return null
-
-  const box = unionBoundingBox(selected)
-  const width = Math.max(1, Math.round(box.maxX - box.minX))
-  const height = Math.max(1, Math.round(box.maxY - box.minY))
-  const temp = new fabric.StaticCanvas(undefined, { width, height })
-
-  // A layer used as a clip mask by another layer *in this same selection*
-  // shouldn't also render independently here, matching how the main canvas
-  // treats masks (see maskedAwayIds in the reconciliation effect below). A
-  // mask whose target isn't part of this selection is left to render
-  // normally — an unusual case not worth extra bookkeeping to special-case.
-  const maskedAwayIds = new Set(
-    selected.map((l) => l.clipPathId).filter((id): id is string => id !== undefined && idSet.has(id)),
-  )
-
-  for (const layer of layers) {
-    if (!idSet.has(layer.id) || maskedAwayIds.has(layer.id) || !isLayerVisible(layer, folders)) continue
-
-    let obj: fabric.Object | null = null
-    if (layer.type === 'text') {
-      obj = createTextObject(layer, folders)
-    } else if (layer.type === 'shape') {
-      obj = createShapeObject(layer, folders)
-    } else if (layer.type === 'path') {
-      obj = createPathObject(layer, folders)
-    } else {
-      try {
-        const img = await fabric.FabricImage.fromURL(layer.src)
-        applyImageLayer(img, layer, folders)
-        obj = img
-      } catch {
-        continue
-      }
-    }
-
-    // Shift from the original (whole-canvas) coordinate space into this
-    // temp canvas's local space, whose (0,0) is the selection box's corner.
-    obj.set({ left: (obj.left ?? 0) - box.minX, top: (obj.top ?? 0) - box.minY })
-
-    const maskLayer = layer.clipPathId ? layers.find((l) => l.id === layer.clipPathId) : undefined
-    if (maskLayer && maskLayer.type !== 'image') {
-      const clipObj =
-        maskLayer.type === 'text'
-          ? createTextObject(maskLayer, folders)
-          : maskLayer.type === 'path'
-            ? createPathObject(maskLayer, folders)
-            : createShapeObject(maskLayer, folders)
-      clipObj.absolutePositioned = true
-      clipObj.set({ left: (clipObj.left ?? 0) - box.minX, top: (clipObj.top ?? 0) - box.minY })
-      obj.set({ clipPath: clipObj })
-    }
-
-    temp.add(obj)
-  }
-
-  temp.renderAll()
-  const src = temp.toDataURL({ format: 'png', multiplier: 2 })
-  temp.dispose()
-
-  return { src, x: box.minX, y: box.minY, width, height }
-}
-
-// The zoom/pan view state below is a pure presentation concern (how much of
-// the artwork is visible and at what scale) — it never touches Fabric's own
-// coordinate system, so it can't disturb the center/top-left conversion above.
-const MIN_ZOOM = 0.1
-const MAX_ZOOM = 4
-const clampZoom = (value: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value))
-const VIEWPORT_PADDING = 64 // matches .canvas-wrap's CSS padding (2rem each side)
-
-const RULER_SIZE = 20 // px, matches .ruler's thickness in Canvas.css
-
-// Picks the smallest mm interval (from a fixed set of "nice" values) whose
-// on-screen spacing at the current zoom is still readable — re-picked on
-// every render rather than memoized, since it only depends on `zoom`.
-const TICK_INTERVALS_MM = [1, 2, 5, 10, 20, 25, 50, 100, 200, 500]
-const MIN_TICK_SPACING_PX = 40
-const pickTickIntervalMm = (zoomLevel: number) => {
-  for (const mm of TICK_INTERVALS_MM) {
-    if (mmToPx(mm) * zoomLevel >= MIN_TICK_SPACING_PX) return mm
-  }
-  return TICK_INTERVALS_MM[TICK_INTERVALS_MM.length - 1]
-}
-
-// Web fonts loaded via <link> in index.html aren't fetched until something
-// actually renders text with them — and unlike DOM text, Fabric's canvas
-// text draws once with whatever's available *right now* and never repaints
-// itself when the real font finishes loading. We kick the download off
-// explicitly and force one re-render once it's ready, so Korean text isn't
-// stuck on the system fallback font.
-const WEB_FONT_FAMILIES = ['Noto Sans KR', 'Nanum Gothic', 'Nanum Myeongjo']
-
-const isTypingTarget = (target: EventTarget | null): boolean => {
-  if (!(target instanceof HTMLElement)) return false
-  return (
-    target.tagName === 'INPUT' ||
-    target.tagName === 'TEXTAREA' ||
-    target.tagName === 'SELECT' ||
-    target.isContentEditable
-  )
-}
 
 export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const canvasElRef = useRef<HTMLCanvasElement>(null)
@@ -385,6 +57,10 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   // discard -> selection:cleared -> store update -> re-render loop.
   const prevPositionsRef = useRef(new Map<string, { x: number; y: number }>())
   const pendingImageIds = useRef(new Set<string>())
+  // Font families we've already asked the browser to fetch (see the web-font
+  // effect below) — lets that effect skip families it has already kicked
+  // off instead of re-requesting them on every layers change.
+  const requestedFontsRef = useRef(new Set<string>())
   const pinchStateRef = useRef<{ distance: number; zoom: number } | null>(null)
   const panDragRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number } | null>(null)
   const marqueeStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -410,16 +86,6 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   )
   const [draggingGuide, setDraggingGuide] = useState<{ id: string; position: number } | null>(null)
   const isPanning = panMode || spaceHeld
-  // Right-click menu. `targetIds` is captured at open time rather than
-  // re-read from the store's live `selectedIds` while the menu is open, so
-  // the actions it renders always match what was actually under the cursor
-  // — an empty array means the artboard/background was clicked, not an
-  // object, and only shows the canvas-level "붙여넣기" action.
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; targetIds: string[] } | null>(null)
-  // Stable reference so ContextMenu's outside-click/Escape effect doesn't
-  // tear down and re-attach its window listeners on every Canvas re-render
-  // while the menu is open.
-  const closeContextMenu = useCallback(() => setContextMenu(null), [])
 
   useEffect(() => {
     zoomRef.current = zoom
@@ -450,6 +116,23 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   const drawMode = useEditorStore((s) => s.drawMode)
   const drawColor = useEditorStore((s) => s.drawColor)
   const drawWidth = useEditorStore((s) => s.drawWidth)
+
+  const { contextMenu, handleContextMenu, closeContextMenu, buildContextMenuEntries } = useCanvasContextMenu({
+    fabricRef,
+    idToObject,
+    layers,
+    selectedIds,
+    selectLayers,
+    isPanning,
+    clipboard,
+    copyLayers,
+    pasteLayers,
+    removeLayers,
+    duplicateLayers,
+    groupLayers,
+    ungroupLayer,
+    reorderLayer,
+  })
 
   // "저장" only ever wrote to localStorage — nothing read it back until the
   // user explicitly clicked "불러오기", so a plain page refresh after saving
@@ -728,104 +411,6 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     selectLayers(ids)
   }
 
-  // Same AABB hit-test the marquee-select above uses against idToObject,
-  // walked topmost-first (end of the layers array = front of z-order) so a
-  // right-click on overlapping objects picks whatever's actually on top.
-  const hitTestLayerAt = (clientX: number, clientY: number): string | null => {
-    const canvas = fabricRef.current
-    if (!canvas) return null
-    const canvasRect = canvas.upperCanvasEl.getBoundingClientRect()
-    if (canvasRect.width === 0 || canvasRect.height === 0) return null
-    const scaleX = canvasRect.width / canvas.getWidth()
-    const scaleY = canvasRect.height / canvas.getHeight()
-    for (let i = layers.length - 1; i >= 0; i--) {
-      const layer = layers[i]
-      const obj = idToObject.current.get(layer.id)
-      if (!obj || obj.visible === false) continue
-      const b = obj.getBoundingRect()
-      const left = canvasRect.left + b.left * scaleX
-      const top = canvasRect.top + b.top * scaleY
-      if (clientX >= left && clientX <= left + b.width * scaleX && clientY >= top && clientY <= top + b.height * scaleY) {
-        return layer.id
-      }
-    }
-    return null
-  }
-
-  const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isPanning) return
-    e.preventDefault()
-    const hitId = hitTestLayerAt(e.clientX, e.clientY)
-    if (!hitId) {
-      setContextMenu({ x: e.clientX, y: e.clientY, targetIds: [] })
-      return
-    }
-    const targetIds = selectedIds.length > 1 && selectedIds.includes(hitId) ? selectedIds : [hitId]
-    const alreadySelected =
-      targetIds.length === selectedIds.length && targetIds.every((id, i) => id === selectedIds[i])
-    if (!alreadySelected) selectLayers(targetIds)
-    setContextMenu({ x: e.clientX, y: e.clientY, targetIds })
-  }
-
-  const buildContextMenuEntries = (targetIds: string[]): ContextMenuEntry[] => {
-    if (targetIds.length === 0) {
-      return [
-        {
-          label: '붙여넣기',
-          shortcut: 'Ctrl/Cmd+V',
-          disabled: clipboard.length === 0,
-          onSelect: () => pasteLayers(),
-        },
-      ]
-    }
-
-    const entries: ContextMenuEntry[] = [
-      { label: '복사', shortcut: 'Ctrl/Cmd+C', onSelect: () => copyLayers(targetIds) },
-      {
-        label: '잘라내기',
-        shortcut: 'Ctrl/Cmd+X',
-        onSelect: () => {
-          copyLayers(targetIds)
-          removeLayers(targetIds)
-        },
-      },
-      {
-        label: '붙여넣기',
-        shortcut: 'Ctrl/Cmd+V',
-        disabled: clipboard.length === 0,
-        onSelect: () => pasteLayers(),
-      },
-      'separator',
-      { label: '복제', onSelect: () => duplicateLayers(targetIds) },
-    ]
-
-    if (targetIds.length > 1) {
-      entries.push({ label: '그룹으로 묶기', onSelect: () => groupLayers(targetIds) })
-    } else {
-      const [onlyId] = targetIds
-      entries.push(
-        'separator',
-        { label: '맨 앞으로 가져오기', onSelect: () => reorderLayer(onlyId, 'front') },
-        { label: '앞으로 가져오기', onSelect: () => reorderLayer(onlyId, 'forward') },
-        { label: '뒤로 보내기', onSelect: () => reorderLayer(onlyId, 'backward') },
-        { label: '맨 뒤로 보내기', onSelect: () => reorderLayer(onlyId, 'back') },
-      )
-      const layer = layers.find((l) => l.id === onlyId)
-      if (layer?.folderId) {
-        entries.push('separator', { label: '폴더에서 빼기', onSelect: () => ungroupLayer(onlyId) })
-      }
-    }
-
-    entries.push('separator', {
-      label: '삭제',
-      shortcut: 'Delete',
-      danger: true,
-      onSelect: () => removeLayers(targetIds),
-    })
-
-    return entries
-  }
-
   // Initialize the Fabric canvas once and wire canvas -> store event sync.
   useEffect(() => {
     if (!canvasElRef.current) return
@@ -1057,18 +642,34 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
     canvas.freeDrawingBrush = brush
   }, [drawMode, drawColor, drawWidth])
 
-  // Explicitly trigger the Korean web fonts to download, then force one
-  // re-render once they land (see WEB_FONT_FAMILIES comment above).
+  // Web fonts loaded via <link> in index.html aren't fetched until something
+  // actually renders text with them — and unlike DOM text, canvas text draws
+  // once with whatever's available *right now* and never repaints itself
+  // when the real font finishes loading. A one-time fetch on mount used to
+  // cover this, but it missed exactly the case that mattered: picking a
+  // sample preset (or loading/importing a project) well after mount adds
+  // text in fonts that were never requested, so it stayed on the system
+  // fallback until some unrelated interaction (e.g. selecting the layer)
+  // forced a re-render. Re-derive the fonts actually in use from `layers`
+  // instead, and explicitly kick off (and re-render after) whichever of
+  // them haven't been requested yet.
   useEffect(() => {
     if (typeof document === 'undefined' || !('fonts' in document)) return
-    const loads = WEB_FONT_FAMILIES.flatMap((family) => [
+    const families = new Set(
+      layers.filter((l): l is TextLayer => l.type === 'text').map((l) => l.fontFamily),
+    )
+    const toLoad = [...families].filter((family) => !requestedFontsRef.current.has(family))
+    if (toLoad.length === 0) return
+    toLoad.forEach((family) => requestedFontsRef.current.add(family))
+    const loads = toLoad.flatMap((family) => [
       document.fonts.load(`16px "${family}"`).catch(() => {}),
       document.fonts.load(`700 16px "${family}"`).catch(() => {}),
+      document.fonts.load(`italic 16px "${family}"`).catch(() => {}),
     ])
     Promise.all(loads).finally(() => {
       fabricRef.current?.requestRenderAll()
     })
-  }, [])
+  }, [layers])
 
   // Resize the canvas when the print preset changes, and auto-fit the view
   // so a large preset (e.g. an A4 poster) is never taller/wider than the
