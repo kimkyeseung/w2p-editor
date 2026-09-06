@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createProject, deleteProject, fetchProjects } from '../../utils/api'
 import { Modal } from '../common/Modal'
+import { useEditorStore } from '../../store/editorStore'
 import type { ApiProject, EditorLayer, LayerFolder } from '../../types/editor'
 import './ProjectList.css'
 
@@ -19,6 +20,7 @@ export function ProjectList({ currentPresetId, currentLayers, currentFolders, on
   const [status, setStatus] = useState<Status>('loading')
   const [saveName, setSaveName] = useState('')
   const [saving, setSaving] = useState(false)
+  const markSaved = useEditorStore((s) => s.markSaved)
 
   const refresh = async () => {
     setStatus('loading')
@@ -45,6 +47,7 @@ export function ProjectList({ currentPresetId, currentLayers, currentFolders, on
       const created = await createProject(name, currentPresetId, currentLayers, currentFolders)
       setProjects((prev) => [...prev, created])
       setSaveName('')
+      markSaved()
     } catch {
       window.alert('저장하지 못했습니다. API 서버 연결을 확인해주세요.')
     } finally {

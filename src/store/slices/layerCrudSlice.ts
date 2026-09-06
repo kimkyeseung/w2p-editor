@@ -176,7 +176,13 @@ export const createLayerCrudSlice = (set: Set, get: Get): LayerCrudSlice => ({
   },
 
   renameLayer: (id, name) => {
+    // Fires on every keystroke of the name field, so it deliberately skips
+    // pushHistory (one undo step per character would be unusable) — but the
+    // name is still real, persisted document content, so `dirty` still
+    // needs to flip or a rename-only edit won't trigger the unsaved-changes
+    // warning on close.
     set((state) => ({
+      dirty: true,
       layers: state.layers.map((layer) => (layer.id === id ? { ...layer, name } : layer)),
     }))
   },
@@ -270,20 +276,38 @@ export const createLayerCrudSlice = (set: Set, get: Get): LayerCrudSlice => ({
       if (state.clipboard.length === 0) return state
       const offset = 16 * (state.pasteCount + 1)
       const newIds: string[] = []
-      const clones = state.clipboard.map((source) => {
+      const folderIds = new Set(state.folders.map((f) => f.id))
+      const layers = [...state.layers]
+      // Insert each clone right after its copied folder's current last
+      // member — same "stay inside the folder's contiguous block" rule
+      // duplicateLayer/duplicateLayers follow — instead of always appending
+      // at the end, which broke that invariant whenever the copied layer
+      // belonged to a folder. Drops the folderId if that folder no longer
+      // exists (e.g. deleted, or copied from an since-replaced document).
+      for (const source of state.clipboard) {
         const newId = createId()
         newIds.push(newId)
-        return {
+        const folderId = source.folderId && folderIds.has(source.folderId) ? source.folderId : undefined
+        const clone = {
           ...source,
           id: newId,
+          folderId,
           name: `${source.name} 사본`,
           x: source.x + offset,
           y: source.y + offset,
         }
-      })
+        let lastIndex = -1
+        if (folderId) {
+          layers.forEach((l, i) => {
+            if (l.folderId === folderId) lastIndex = i
+          })
+        }
+        if (lastIndex === -1) layers.push(clone)
+        else layers.splice(lastIndex + 1, 0, clone)
+      }
       return {
         ...pushHistory(state),
-        layers: [...state.layers, ...clones],
+        layers,
         selectedId: newIds.length === 1 ? newIds[0] : null,
         selectedIds: newIds,
         pasteCount: state.pasteCount + 1,

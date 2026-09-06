@@ -91,7 +91,11 @@ export const createFoldersSlice = (set: Set): FoldersSlice => ({
   },
 
   renameFolder: (id, name) => {
+    // Fires on every keystroke, so it deliberately skips pushHistory (see
+    // the matching comment on renameLayer) — but still needs to mark the
+    // document dirty, since the name is persisted content.
     set((state) => ({
+      dirty: true,
       folders: state.folders.map((f) => (f.id === id ? { ...f, name } : f)),
     }))
   },

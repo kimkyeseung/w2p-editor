@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import * as fabric from 'fabric'
 import { useEditorStore } from '../../store/editorStore'
 import { getPresetById, mmToPx } from '../../utils/presets'
+import { isEditableTarget } from '../../utils/dom'
 import type { EditorGuide, ImageLayer, TextLayer } from '../../types/editor'
 import {
   exportCanvasAsPng,
@@ -22,7 +23,7 @@ import {
   createTextObject,
   topLeftFromObject,
 } from './fabricObjects'
-import { RULER_SIZE, VIEWPORT_PADDING, clampZoom, isTypingTarget, pickTickIntervalMm } from './canvasView'
+import { RULER_SIZE, VIEWPORT_PADDING, clampZoom, pickTickIntervalMm } from './canvasView'
 import { ContextMenu } from '../ContextMenu/ContextMenu'
 import { useCanvasContextMenu } from './useCanvasContextMenu'
 import './Canvas.css'
@@ -313,7 +314,7 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   // Hold Space for a temporary hand tool, Photoshop/Figma-style.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== 'Space' || isTypingTarget(e.target)) return
+      if (e.code !== 'Space' || isEditableTarget(e.target)) return
       // Browsers auto-repeat keydown while a key is held, and Space's
       // default action is "scroll the page down" — without preventDefault
       // on every repeat (not just the first press), holding Space scrolls
@@ -1099,6 +1100,13 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
           onPointerMove={handlePanPointerMove}
           onPointerUp={handlePanPointerUp}
           onPointerCancel={handlePanPointerUp}
+          // This overlay sits in front of canvas-scroll while panning (see
+          // the comment above), so a right-click here never reaches
+          // canvas-scroll's own onContextMenu at all — without this, the
+          // native browser menu leaked through on every right-click while
+          // panning, regardless of the isPanning check inside
+          // handleContextMenu itself.
+          onContextMenu={handleContextMenu}
         />
       )}
 

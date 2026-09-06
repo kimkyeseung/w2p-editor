@@ -76,8 +76,13 @@ export function useCanvasContextMenu({
   }
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isPanning) return
+    // Always suppress the native menu first — Canvas.tsx sets
+    // stopContextMenu: false on the Fabric canvas specifically so this
+    // handler is the only thing left doing that job. Bailing out on
+    // `isPanning` *before* this ran used to let the native menu leak
+    // through while panning (space-held or the hand tool).
     e.preventDefault()
+    if (isPanning) return
     const hitId = hitTestLayerAt(e.clientX, e.clientY)
     if (!hitId) {
       setContextMenu({ x: e.clientX, y: e.clientY, targetIds: [] })
@@ -91,15 +96,15 @@ export function useCanvasContextMenu({
   }
 
   const buildContextMenuEntries = (targetIds: string[]): ContextMenuEntry[] => {
+    const pasteEntry: ContextMenuEntry = {
+      label: '붙여넣기',
+      shortcut: 'Ctrl/Cmd+V',
+      disabled: clipboard.length === 0,
+      onSelect: () => pasteLayers(),
+    }
+
     if (targetIds.length === 0) {
-      return [
-        {
-          label: '붙여넣기',
-          shortcut: 'Ctrl/Cmd+V',
-          disabled: clipboard.length === 0,
-          onSelect: () => pasteLayers(),
-        },
-      ]
+      return [pasteEntry]
     }
 
     const entries: ContextMenuEntry[] = [
@@ -112,12 +117,7 @@ export function useCanvasContextMenu({
           removeLayers(targetIds)
         },
       },
-      {
-        label: '붙여넣기',
-        shortcut: 'Ctrl/Cmd+V',
-        disabled: clipboard.length === 0,
-        onSelect: () => pasteLayers(),
-      },
+      pasteEntry,
       'separator',
       { label: '복제', onSelect: () => duplicateLayers(targetIds) },
     ]

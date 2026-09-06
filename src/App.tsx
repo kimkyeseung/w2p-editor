@@ -7,19 +7,10 @@ import { MockupPreview } from './components/MockupPreview/MockupPreview'
 import { ProjectList } from './components/ProjectList/ProjectList'
 import { Toast } from './components/Toast/Toast'
 import { useEditorStore } from './store/editorStore'
+import { isEditableTarget } from './utils/dom'
 import './App.css'
 
 type MobileTab = 'layers' | 'properties'
-
-const isEditableTarget = (target: EventTarget | null): boolean => {
-  if (!(target instanceof HTMLElement)) return false
-  return (
-    target.tagName === 'INPUT' ||
-    target.tagName === 'TEXTAREA' ||
-    target.tagName === 'SELECT' ||
-    target.isContentEditable
-  )
-}
 
 function App() {
   const canvasHandleRef = useRef<CanvasHandle>(null)

@@ -20,13 +20,3 @@ export const pickTickIntervalMm = (zoomLevel: number) => {
   }
   return TICK_INTERVALS_MM[TICK_INTERVALS_MM.length - 1]
 }
-
-export const isTypingTarget = (target: EventTarget | null): boolean => {
-  if (!(target instanceof HTMLElement)) return false
-  return (
-    target.tagName === 'INPUT' ||
-    target.tagName === 'TEXTAREA' ||
-    target.tagName === 'SELECT' ||
-    target.isContentEditable
-  )
-}
