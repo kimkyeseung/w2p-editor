@@ -346,8 +346,8 @@ export function Toolbar({ canvasHandleRef, onOpenMockup, onOpenProjectList, onTo
         <button
           type="button"
           className="toolbar-primary"
-          onClick={() => {
-            canvasHandleRef.current?.exportPng()
+          onClick={async () => {
+            await canvasHandleRef.current?.exportPng()
             onToast('PNG로 내보냈습니다.')
           }}
         >

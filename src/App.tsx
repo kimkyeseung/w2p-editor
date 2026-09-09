@@ -124,8 +124,8 @@ function App() {
     setDrawMode,
   ])
 
-  const handleOpenMockup = () => {
-    const dataUrl = canvasHandleRef.current?.getDesignDataUrl()
+  const handleOpenMockup = async () => {
+    const dataUrl = await canvasHandleRef.current?.getDesignDataUrl()
     if (!dataUrl) {
       window.alert('먼저 캔버스에 텍스트나 이미지를 추가해주세요.')
       return

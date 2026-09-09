@@ -4,6 +4,11 @@ export const MM_TO_PX = 3.7795275591
 
 export const mmToPx = (mm: number): number => Math.round(mm * MM_TO_PX)
 
+// The live canvas is laid out at 96 DPI (MM_TO_PX above). PNG export renders
+// it at this multiplier instead so the output hits a print-quality 300 DPI
+// rather than the screen's native 96.
+export const PRINT_EXPORT_MULTIPLIER = 300 / 96
+
 export const CANVAS_PRESETS: CanvasPreset[] = [
   {
     id: 'business-card',

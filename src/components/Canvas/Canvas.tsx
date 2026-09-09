@@ -29,12 +29,12 @@ import { useCanvasContextMenu } from './useCanvasContextMenu'
 import './Canvas.css'
 
 export interface CanvasHandle {
-  exportPng: () => void
+  exportPng: () => Promise<void>
   saveToLocalStorage: () => void
   loadFromLocalStorage: () => boolean
   exportProjectFile: () => void
   importProjectFile: (file: File) => Promise<void>
-  getDesignDataUrl: () => string | null
+  getDesignDataUrl: () => Promise<string | null>
   flattenSelection: () => Promise<void>
 }
 
@@ -58,6 +58,14 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   // discard -> selection:cleared -> store update -> re-render loop.
   const prevPositionsRef = useRef(new Map<string, { x: number; y: number }>())
   const pendingImageIds = useRef(new Set<string>())
+  // Polls until all in-flight fabric.FabricImage.fromURL() loads (see the
+  // image-layer branch below) have settled, so export doesn't race a
+  // just-added image and produce a PNG missing that layer.
+  const waitForPendingImages = async (): Promise<void> => {
+    while (pendingImageIds.current.size > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    }
+  }
   // Characters we've already asked the browser to fetch, per font family
   // (see the web-font effect below) — lets that effect request only the
   // characters it hasn't already kicked off instead of re-requesting a
@@ -974,7 +982,8 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
   }, [layers, folders, selectedIds])
 
   useImperativeHandle(ref, () => ({
-    exportPng: () => {
+    exportPng: async () => {
+      await waitForPendingImages()
       const canvas = fabricRef.current
       if (canvas) exportCanvasAsPng(canvas)
     },
@@ -999,7 +1008,8 @@ export const Canvas = forwardRef<CanvasHandle>((_props, ref) => {
       const project = await importProjectFile(file)
       replaceAll(project.layers, project.presetId, project.folders ?? [])
     },
-    getDesignDataUrl: () => {
+    getDesignDataUrl: async () => {
+      await waitForPendingImages()
       const canvas = fabricRef.current
       if (!canvas || layers.length === 0) return null
       return canvas.toDataURL({ format: 'png', multiplier: 2 })

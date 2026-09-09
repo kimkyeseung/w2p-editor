@@ -1,5 +1,6 @@
 import * as fabric from 'fabric'
 import type { EditorLayer, LayerFolder, PersistedProject } from '../types/editor'
+import { PRINT_EXPORT_MULTIPLIER } from './presets'
 
 const STORAGE_KEY = 'w2p-editor:project'
 
@@ -78,7 +79,7 @@ export const importProjectFile = (file: File): Promise<PersistedProject> =>
   })
 
 export const exportCanvasAsPng = (canvas: fabric.Canvas): void => {
-  const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 2 })
+  const dataUrl = canvas.toDataURL({ format: 'png', multiplier: PRINT_EXPORT_MULTIPLIER })
   const link = document.createElement('a')
   link.href = dataUrl
   link.download = `w2p-design-${Date.now()}.png`
